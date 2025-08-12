@@ -7,6 +7,7 @@ const validate = require('../middlewares/validate');
 
 // Apply for a loan
 router.post('/apply', [
+    auth,
     check('amount', 'Amount is required').isNumeric(),
     check('term', 'Term in days is required').isNumeric(),
     check('collateralAmount', 'Collateral amount is required').isNumeric(),

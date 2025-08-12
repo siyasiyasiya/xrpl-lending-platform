@@ -94,8 +94,17 @@ const LoanApplication = ({ onLoanCreated }) => {
         throw new Error(`Minimum collateral required: ${(parseFloat(formData.amount) * riskProfile.collateralRatio).toFixed(2)} XRP (${riskProfile.collateralRatio * 100}% of loan amount)`);
       }
       
+      const loanApplicationData = {
+        ...formData,
+        walletAddress: currentUser.walletAddress
+      };
+
+      console.log('Submitting loan application:', loanApplicationData);
+      
       // Submit loan application
-      const response = await api.post('/loans/apply', formData);
+      const response = await api.post('/loans/apply', loanApplicationData);
+
+      console.log('Loan application response:', response);
       
       // Notify parent component
       if (onLoanCreated) {
