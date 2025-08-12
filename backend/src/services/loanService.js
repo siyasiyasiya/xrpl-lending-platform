@@ -39,7 +39,7 @@ class LoanService {
         maxLoanAmount: 500,
         eligibleForUndercollateralized: true
       };
-    } else if (pcaScore <= 74.7) { // High Risk mean
+    } else if (pcaScore <= 80) { // High Risk mean
       return {
         category: 'High Risk',
         interestRate: 0.35, // 35%
@@ -86,7 +86,7 @@ class LoanService {
       };
       
       // Determine risk category and loan terms
-      const riskProfile = this.calculateRiskCategory(pcaRiskScore);
+      const riskProfile = this.calculateRiskCategory(creditScore);
       
       // Check if borrower is eligible for undercollateralized lending
       if (!riskProfile.eligibleForUndercollateralized) {
@@ -116,6 +116,10 @@ class LoanService {
         throw new Error(`Insufficient collateral. Minimum required for your risk profile: ${minRequiredCollateral} XRP (${riskProfile.collateralRatio * 100}% of loan amount)`);
       }
 
+      const applicationDate = new Date();
+      const dueDate = new Date(applicationDate);
+      dueDate.setDate(applicationDate.getDate() + parseInt(term))
+
       // Create loan in PENDING status
       const newLoan = new Loan({
         borrower: borrowerWalletAddress,
@@ -124,7 +128,8 @@ class LoanService {
         interestRate: riskProfile.interestRate,
         term,
         status: 'PENDING',
-        createdAt: new Date()
+        createdAt: applicationDate,
+        dueDate: dueDate
       });
 
       await newLoan.save();
