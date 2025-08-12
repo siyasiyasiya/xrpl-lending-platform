@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const auth = require('../middlewares/auth');
 const loanService = require('../services/loanService');
-const authMiddleware = require('../middlewares/auth');
+const { check } = require('express-validator');
+const validate = require('../middlewares/validate');
 
 // Apply for a loan
-router.post('/apply', authMiddleware, [
+router.post('/apply', [
     check('amount', 'Amount is required').isNumeric(),
     check('term', 'Term in days is required').isNumeric(),
     check('collateralAmount', 'Collateral amount is required').isNumeric(),
@@ -35,7 +37,7 @@ router.post('/apply', authMiddleware, [
   });
 
 // Get loans for current user
-router.get('/my-loans', authMiddleware, async (req, res) => {
+router.get('/my-loans', auth, async (req, res) => {
   try {
     const walletAddress = req.user.walletAddress;
     const loans = await loanService.getLoansByWallet(walletAddress);
@@ -47,7 +49,7 @@ router.get('/my-loans', authMiddleware, async (req, res) => {
 });
 
 // Get loan details
-router.get('/:id', authMiddleware, async (req, res) => {
+router.get('/:id', auth, async (req, res) => {
   try {
     const loan = await loanService.getLoanById(req.params.id);
     
@@ -68,7 +70,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 // Make a repayment
-router.post('/:id/repay', authMiddleware, async (req, res) => {
+router.post('/:id/repay', auth, async (req, res) => {
   try {
     const { amount } = req.body;
     const loanId = req.params.id;

@@ -55,4 +55,13 @@ export const metrics = {
   }
 };
 
+export const creditScore = {
+    getCreditScore: async (walletAddress) => {
+      const response = await api.get('/credit/credit-score/', {
+        params: { address: walletAddress }
+      });
+      return response.data;
+    }
+};
+
 export default api;

@@ -1,89 +1,245 @@
-.credit-score-container {
-    position: relative;
+/* Risk Score Component Styling - Fixed margins */
+.credit-score-card {
+    background-color: white;
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    padding: 2rem;
+    margin: 0 0 2rem 0; /* Removed top margin */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     width: 100%;
-    max-width: 300px;
-    margin: 0 auto;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  /* Adjust the parent container in Dashboard */
+  .dashboard-section, .dashboard-widget {
+    margin-top: 0.5rem; /* Reduced top margin */
+    margin-bottom: 0.5rem; /* Consistent spacing */
+  }
+  
+  .credit-score-card h2 {
+    color: #1e3a8a;
+    font-size: 1.5rem;
+    margin: 0 0 1.5rem 0; /* Removed top margin from heading */
     text-align: center;
   }
   
-  .credit-score-circle {
+  /* Score Display */
+  .score-display {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     position: relative;
-    width: 220px;
-    height: 220px;
-    margin: 0 auto;
+    transition: all 0.3s ease;
   }
   
-  .credit-score-circle svg {
-    transform: rotate(-90deg);
-    overflow: visible;
-  }
-  
-  .credit-score-circle circle {
-    fill: none;
-    stroke-width: 12;
-  }
-  
-  .credit-score-bg {
-    stroke: rgba(229, 231, 235, 0.5);
-  }
-  
-  .credit-score-progress {
-    stroke-linecap: round;
-    transition: stroke-dashoffset 1s ease-in-out;
-  }
-  
-  .credit-score-value {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 2.5rem;
+  .score-number {
+    color: white;
+    font-size: 2.2rem;
     font-weight: 700;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
   
-  .credit-score-label {
-    font-size: 1rem;
-    font-weight: 500;
-    margin-top: 0.5rem;
+  .risk-category {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0.5rem 0 1.5rem;
+    text-align: center;
   }
   
-  .credit-score-excellent .credit-score-progress { stroke: #10b981; }
-  .credit-score-good .credit-score-progress { stroke: #3b82f6; }
-  .credit-score-fair .credit-score-progress { stroke: #f59e0b; }
-  .credit-score-poor .credit-score-progress { stroke: #ef4444; }
+  /* Loan Terms */
+  .loan-terms {
+    width: 100%;
+    margin: 1rem 0;
+    padding: 1.5rem;
+    background-color: #f8fafc;
+    border-radius: 0.75rem;
+  }
   
-  .credit-score-excellent .credit-score-value { color: #10b981; }
-  .credit-score-good .credit-score-value { color: #3b82f6; }
-  .credit-score-fair .credit-score-value { color: #f59e0b; }
-  .credit-score-poor .credit-score-value { color: #ef4444; }
+  .loan-terms h3 {
+    color: #1e3a8a;
+    font-size: 1.2rem;
+    margin-bottom: 1.25rem;
+    text-align: center;
+  }
   
-  .credit-score-details {
+  .terms-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    margin-top: 2rem;
-    text-align: left;
+    gap: 1.25rem;
   }
   
-  .credit-factor {
+  .term-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
     padding: 1rem;
     background-color: white;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
   
-  .credit-factor-label {
-    font-size: 0.875rem;
+  .term-label {
+    font-size: 0.9rem;
     color: #64748b;
     margin-bottom: 0.5rem;
   }
   
-  .credit-factor-value {
+  .term-value {
     font-size: 1.25rem;
-    font-weight: 600;
+    font-weight: 700;
+    color: #334155;
   }
   
-  .credit-factor-excellent { color: #10b981; }
-  .credit-factor-good { color: #3b82f6; }
-  .credit-factor-fair { color: #f59e0b; }
-  .credit-factor-poor { color: #ef4444; }
+  .not-eligible {
+    text-align: center;
+    padding: 1rem;
+    color: #dc2626;
+  }
+  
+  .not-eligible p {
+    margin: 0.5rem 0;
+  }
+  
+  /* Footer Info */
+  .footer-info {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+  
+  /* Error State */
+  .error-state {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .error-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    color: #ef4444;
+    padding: 1.5rem;
+    width: 100%;
+  }
+  
+  .error-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #fee2e2;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 1rem;
+  }
+  
+  .retry-button {
+    margin-top: 1rem;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .retry-button:hover {
+    background-color: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+  }
+  
+  /* Loading State */
+  .loading-state {
+    min-height: 200px; /* Reduced height */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .loading-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(59, 130, 246, 0.1);
+    border-left-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  .loading-indicator p {
+    color: #64748b;
+    font-size: 1rem;
+    margin: 0;
+  }
+  
+  /* Responsive Adjustments */
+  @media (max-width: 640px) {
+    .credit-score-card {
+      padding: 1.5rem;
+      margin-top: 0; /* Remove top margin on mobile */
+    }
+    
+    .score-display {
+      width: 100px;
+      height: 100px;
+    }
+    
+    .score-number {
+      font-size: 1.75rem;
+    }
+    
+    .terms-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .footer-info {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+  }
+  
+  /* Dashboard specific styles - add to your Dashboard.css or main App.css */
+  .dashboard-container h1 {
+    margin-bottom: 0.5rem; /* Reduce space after welcome heading */
+  }
+  
+  .dashboard-widgets-container {
+    margin-top: 1rem; /* Less space after the welcome section */
+  }

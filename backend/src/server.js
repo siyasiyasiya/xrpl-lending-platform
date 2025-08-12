@@ -7,6 +7,7 @@ const config = require('./config/config');
 const authRoutes = require('./routes/authRoutes');
 const loanRoutes = require('./routes/loanRoutes');
 const metricRoutes = require('./routes/metricRoutes');
+const creditRoutes = require('./routes/creditRoutes');
 
 // Initialize Express app
 const app = express();
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/loans', loanRoutes);
 app.use('/api/metrics', metricRoutes);
+app.use('/api/credit', creditRoutes);
 app.get('/api/test', (req, res) => {
     res.status(200).json({ message: 'API is working!' });
   });

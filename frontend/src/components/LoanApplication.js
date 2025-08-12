@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../utils/AuthContext';
-import '../styles/components/LoanApplication.css'
-
+import '../styles/components/LoanApplication.css';
 
 const LoanApplication = ({ onLoanCreated }) => {
   const navigate = useNavigate();
@@ -15,62 +14,117 @@ const LoanApplication = ({ onLoanCreated }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [creditScore, setCreditScore] = useState(null);
+  const [riskScore, setRiskScore] = useState(null);
   const [riskProfile, setRiskProfile] = useState(null);
   const [collateralRatio, setCollateralRatio] = useState(0);
+  const [timestamp, setTimestamp] = useState("2025-08-12 19:34:36");
 
-  // Fetch user credit score on component mount
+  // Load risk score and terms from session storage
   useEffect(() => {
-    const fetchCreditScore = async () => {
-      try {
-        const response = await api.get('/user/credit-score');
-        setCreditScore(response.data.creditScore);
-        
-        // Estimate risk profile based on credit score
-        if (response.data.creditScore > 750) {
-          setRiskProfile({
-            category: 'Very Low Risk',
-            collateralRatio: 0.6,
-            maxLoanAmount: 1000,
-            interestRate: 0.12
-          });
-        } else if (response.data.creditScore > 700) {
-          setRiskProfile({
-            category: 'Low Risk',
-            collateralRatio: 0.7,
-            maxLoanAmount: 750,
-            interestRate: 0.18
-          });
-        } else if (response.data.creditScore > 650) {
-          setRiskProfile({
-            category: 'Medium Risk',
-            collateralRatio: 0.8,
-            maxLoanAmount: 500,
-            interestRate: 0.25
-          });
-        } else if (response.data.creditScore > 600) {
-          setRiskProfile({
-            category: 'High Risk',
-            collateralRatio: 0.9,
-            maxLoanAmount: 300,
-            interestRate: 0.35
-          });
-        } else {
-          setRiskProfile({
-            category: 'Very High Risk',
-            collateralRatio: 1.5,
-            maxLoanAmount: 0,
-            interestRate: 0,
-            eligibleForUndercollateralized: false
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching credit score:', error);
-      }
-    };
+    // Check if we have cached data in session storage first
+    const cachedScore = sessionStorage.getItem('user_risk_score');
+    const cachedTerms = sessionStorage.getItem('user_loan_terms');
+    const cachedTimestamp = sessionStorage.getItem('risk_score_last_updated');
     
-    fetchCreditScore();
+    if (cachedScore && cachedTerms) {
+      const score = parseFloat(cachedScore);
+      setRiskScore(score);
+      setRiskProfile(JSON.parse(cachedTerms));
+      
+      if (cachedTimestamp) {
+        setTimestamp(cachedTimestamp);
+      }
+    } else {
+      // If no cached data, fetch from API
+      fetchRiskData();
+    }
   }, []);
+
+  // Fetch risk score data if not in session storage
+  const fetchRiskData = async () => {
+    try {
+      const response = await api.get('/user/credit-score');
+      
+      if (response.data && typeof response.data.risk_score === 'number') {
+        const score = response.data.risk_score;
+        setRiskScore(score);
+        
+        // Calculate and set risk profile
+        const profile = getLoanTerms(score);
+        setRiskProfile(profile);
+        
+        // Save to session storage
+        sessionStorage.setItem('user_risk_score', score.toString());
+        sessionStorage.setItem('user_loan_terms', JSON.stringify(profile));
+        
+        // Update timestamp
+        const now = new Date();
+        const currentTimestamp = now.toISOString().replace('T', ' ').substring(0, 19);
+        setTimestamp(currentTimestamp);
+        sessionStorage.setItem('risk_score_last_updated', currentTimestamp);
+      } else {
+        throw new Error('Invalid response format');
+      }
+    } catch (error) {
+      console.error('Error fetching risk score:', error);
+      setError('Failed to load your risk profile. Please try again later.');
+    }
+  };
+
+  // Get loan terms based on PCA score - matching the CreditScore component
+  const getLoanTerms = (pcaScore) => {
+    if (pcaScore <= 36.2) { // Very Low Risk
+      return {
+        category: 'Very Low Risk',
+        interestRate: 0.12,
+        collateralRatio: 0.60,
+        maxLoanTerm: 90,
+        maxLoanAmount: 1000,
+        eligibleForUndercollateralized: true,
+        color: '#4CAF50'
+      };
+    } else if (pcaScore <= 44.5) { // Low Risk
+      return {
+        category: 'Low Risk',
+        interestRate: 0.18,
+        collateralRatio: 0.70,
+        maxLoanTerm: 60,
+        maxLoanAmount: 750,
+        eligibleForUndercollateralized: true,
+        color: '#8BC34A'
+      };
+    } else if (pcaScore <= 56.5) { // Medium Risk
+      return {
+        category: 'Medium Risk',
+        interestRate: 0.25,
+        collateralRatio: 0.80,
+        maxLoanTerm: 45,
+        maxLoanAmount: 500,
+        eligibleForUndercollateralized: true,
+        color: '#FF9800'
+      };
+    } else if (pcaScore <= 80) { // High Risk - updated to 80 to match
+      return {
+        category: 'High Risk',
+        interestRate: 0.35,
+        collateralRatio: 0.90,
+        maxLoanTerm: 30,
+        maxLoanAmount: 300,
+        eligibleForUndercollateralized: true,
+        color: '#F44336'
+      };
+    } else {
+      return {
+        category: 'Very High Risk',
+        interestRate: 0,
+        collateralRatio: 1.5,
+        maxLoanTerm: 0,
+        maxLoanAmount: 0,
+        eligibleForUndercollateralized: false,
+        color: '#D32F2F'
+      };
+    }
+  };
 
   // Handle form input changes
   const handleChange = (e) => {
@@ -122,8 +176,10 @@ const LoanApplication = ({ onLoanCreated }) => {
         collateralAmount: ''
       });
       
-      // Show success message or redirect
-      // For this example, we'll stay on the same page
+      // Show success message
+      setError('');
+      alert('Loan application submitted successfully!');
+      
     } catch (error) {
       setError(error.response?.data?.message || error.message);
     } finally {
@@ -132,42 +188,39 @@ const LoanApplication = ({ onLoanCreated }) => {
   };
 
   return (
-    <div className="loan-application card">
-      <h2 className="card-title">Apply for Undercollateralized Loan</h2>
+    <div className="loan-application-card">
+      <h2>Apply for Undercollateralized Loan</h2>
       
       {riskProfile && riskProfile.eligibleForUndercollateralized === false ? (
-        <div className="alert alert-danger">
+        <div className="ineligible-notice">
           <h3>Not Eligible for Undercollateralized Lending</h3>
           <p>Your current risk profile does not qualify for undercollateralized loans.</p>
           <p>To improve your eligibility, consider building your XRP Ledger transaction history and maintaining a positive repayment record.</p>
         </div>
       ) : (
         <>
-          {creditScore && riskProfile && (
-            <div className="loan-eligibility-info">
-              <div className="loan-eligibility-header">
-                <h3>Your Lending Profile</h3>
-                <div className={`badge badge-${riskProfile.category === 'Very Low Risk' || riskProfile.category === 'Low Risk' ? 'primary' : riskProfile.category === 'Medium Risk' ? 'warning' : 'danger'}`}>
-                  {riskProfile.category}
-                </div>
+          {riskScore && riskProfile && (
+            <div className="risk-profile-summary">
+              <div className="risk-category" style={{ color: riskProfile.color }}>
+                {riskProfile.category}
               </div>
               
-              <div className="loan-terms-container">
-                <div className="loan-term-row">
-                  <span className="loan-term-label">Credit Score:</span>
-                  <span className="loan-term-value">{creditScore}</span>
+              <div className="terms-summary">
+                <div className="term-item">
+                  <span className="term-label">Risk Score:</span>
+                  <span className="term-value">{riskScore}</span>
                 </div>
-                <div className="loan-term-row">
-                  <span className="loan-term-label">Max Loan Amount:</span>
-                  <span className="loan-term-value">{riskProfile.maxLoanAmount} XRP</span>
+                <div className="term-item">
+                  <span className="term-label">Max Loan Amount:</span>
+                  <span className="term-value">{riskProfile.maxLoanAmount} XRP</span>
                 </div>
-                <div className="loan-term-row">
-                  <span className="loan-term-label">Required Collateral Ratio:</span>
-                  <span className="loan-term-value">{(riskProfile.collateralRatio * 100).toFixed(0)}%</span>
+                <div className="term-item">
+                  <span className="term-label">Required Collateral:</span>
+                  <span className="term-value">{(riskProfile.collateralRatio * 100).toFixed(0)}%</span>
                 </div>
-                <div className="loan-term-row">
-                  <span className="loan-term-label">Interest Rate:</span>
-                  <span className="loan-term-value">{(riskProfile.interestRate * 100).toFixed(0)}%</span>
+                <div className="term-item">
+                  <span className="term-label">Interest Rate:</span>
+                  <span className="term-value">{(riskProfile.interestRate * 100).toFixed(0)}%</span>
                 </div>
               </div>
             </div>
@@ -175,14 +228,13 @@ const LoanApplication = ({ onLoanCreated }) => {
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label className="form-label">Loan Amount (XRP)</label>
+              <label>Loan Amount (XRP)</label>
               <input
                 type="number"
                 name="amount"
                 value={formData.amount}
                 onChange={handleChange}
-                className="form-control"
-                placeholder="Enter loan amount"
+                placeholder="Enter"
                 min="1"
                 max={riskProfile?.maxLoanAmount || 1000}
                 required
@@ -193,14 +245,13 @@ const LoanApplication = ({ onLoanCreated }) => {
             </div>
             
             <div className="form-group">
-              <label className="form-label">Collateral Amount (XRP)</label>
+              <label>Collateral Amount (XRP)</label>
               <input
                 type="number"
                 name="collateralAmount"
                 value={formData.collateralAmount}
                 onChange={handleChange}
-                className="form-control"
-                placeholder="Enter collateral amount"
+                placeholder="Enter"
                 min={formData.amount ? (parseFloat(formData.amount) * (riskProfile?.collateralRatio || 0.6)).toFixed(2) : '1'}
                 max={formData.amount ? (parseFloat(formData.amount) - 0.01).toFixed(2) : '1000'}
                 required
@@ -208,43 +259,30 @@ const LoanApplication = ({ onLoanCreated }) => {
               <div className="form-help">
                 For undercollateralized loans, collateral must be less than loan amount
                 {formData.amount && (
-                  <div>
-                    <span>Min required: {(parseFloat(formData.amount) * (riskProfile?.collateralRatio || 0.6)).toFixed(2)} XRP</span>
-                    <span> | Max allowed: {(parseFloat(formData.amount) - 0.01).toFixed(2)} XRP</span>
+                  <div className="min-max-info">
+                    <span>Min: {(parseFloat(formData.amount) * (riskProfile?.collateralRatio || 0.6)).toFixed(2)} XRP</span>
+                    <span> | Max: {(parseFloat(formData.amount) - 0.01).toFixed(2)} XRP</span>
                   </div>
                 )}
               </div>
               
-              {/* Collateral ratio display */}
+              {/* Simplified collateral ratio display */}
               {collateralRatio > 0 && (
                 <div className="collateral-info">
-                  <div>Current Collateral Ratio: {(collateralRatio * 100).toFixed(0)}%</div>
-                  <div>Undercollateralized Amount: {(parseFloat(formData.amount) - parseFloat(formData.collateralAmount)).toFixed(2)} XRP</div>
-                  
-                  <div className="ratio-indicator">
-                    <span>0%</span>
-                    <div className="ratio-bar">
-                      <div 
-                        className="ratio-marker" 
-                        style={{ 
-                          position: 'relative',
-                          left: `${Math.min(collateralRatio * 100, 100)}%` 
-                        }}
-                      ></div>
-                    </div>
-                    <span>100%</span>
+                  <div className="ratio-summary">
+                    <span>Current Collateral Ratio: {(collateralRatio * 100).toFixed(0)}%</span>
+                    <span>Undercollateralized: {(parseFloat(formData.amount) - parseFloat(formData.collateralAmount)).toFixed(2)} XRP</span>
                   </div>
                 </div>
               )}
             </div>
             
             <div className="form-group">
-              <label className="form-label">Loan Term (Days)</label>
+              <label>Loan Term (Days)</label>
               <select
                 name="term"
                 value={formData.term}
                 onChange={handleChange}
-                className="form-control"
                 required
               >
                 <option value="30">30 days</option>
@@ -254,11 +292,11 @@ const LoanApplication = ({ onLoanCreated }) => {
               </select>
             </div>
             
-            {/* Loan terms preview */}
+            {/* Simplified loan terms preview */}
             {formData.amount && formData.collateralAmount && riskProfile && (
               <div className="loan-terms-preview">
-                <h3 className="preview-title">Loan Terms Preview</h3>
-                <div className="preview-grid">
+                <h3>Loan Terms Preview</h3>
+                <div className="preview-table">
                   <div className="preview-row">
                     <span className="preview-label">Principal:</span>
                     <span className="preview-value">{parseFloat(formData.amount).toFixed(2)} XRP</span>
@@ -285,21 +323,15 @@ const LoanApplication = ({ onLoanCreated }) => {
                       {(parseFloat(formData.amount) * (1 + riskProfile.interestRate)).toFixed(2)} XRP
                     </span>
                   </div>
-                  <div className="preview-row highlight">
-                    <span className="preview-label">Undercollateralized Amount:</span>
-                    <span className="preview-value">
-                      {(parseFloat(formData.amount) - parseFloat(formData.collateralAmount)).toFixed(2)} XRP
-                    </span>
-                  </div>
                 </div>
               </div>
             )}
             
-            {error && <div className="alert alert-danger mt-3">{error}</div>}
+            {error && <div className="error-message">{error}</div>}
             
             <button 
               type="submit" 
-              className="btn btn-primary btn-block"
+              className="submit-button"
               disabled={loading || !formData.amount || !formData.collateralAmount || (riskProfile?.eligibleForUndercollateralized === false)}
             >
               {loading ? 'Processing...' : 'Submit Loan Application'}
@@ -307,6 +339,11 @@ const LoanApplication = ({ onLoanCreated }) => {
           </form>
         </>
       )}
+      
+      <div className="footer-info">
+        <div className="user-info">Current User's Login: siyasiyasiya</div>
+        <div className="last-updated">Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): {timestamp}</div>
+      </div>
     </div>
   );
 };

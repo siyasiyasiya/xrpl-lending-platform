@@ -1,6 +1,6 @@
 const { RippleAPI } = require('ripple-lib');
 const { XummSdk } = require('xumm-sdk');
-const config = require('../config');
+const config = require('../config/config');
 
 class XRPLService {
   constructor() {

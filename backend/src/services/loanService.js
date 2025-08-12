@@ -61,15 +61,6 @@ class LoanService {
   }
 
   /**
-   * Convert credit score to PCA risk score
-   * @param {number} creditScore - Credit score (300-850)
-   * @returns {number} PCA risk score (0-100)
-   */
-  convertCreditScoreToPCA(creditScore) {
-    return Math.max(0, Math.min(100, 100 - ((creditScore - 300) / 550) * 100));
-  }
-
-  /**
    * Create a new undercollateralized loan application
    * @param {string} borrowerWalletAddress - Borrower's XRP wallet address
    * @param {number} amount - Requested loan amount
@@ -90,12 +81,9 @@ class LoanService {
       let creditScore = user.creditScore;
       if (!creditScore || creditScore === 0) {
         creditScore = await creditScoreClient.getCreditScore(borrowerWalletAddress);
-        user.creditScore = creditScore;
+        user.creditScore = creditScore.risk_score;
         await user.save();
-      }
-
-      // Convert credit score to PCA risk score
-      const pcaRiskScore = this.convertCreditScoreToPCA(creditScore);
+      };
       
       // Determine risk category and loan terms
       const riskProfile = this.calculateRiskCategory(pcaRiskScore);
@@ -145,7 +133,6 @@ class LoanService {
         loan: newLoan,
         riskProfile: {
           category: riskProfile.category,
-          pcaScore: pcaRiskScore,
           creditScore,
           collateralRatio: riskProfile.collateralRatio,
           undercollateralizedAmount: amount - collateralAmount
