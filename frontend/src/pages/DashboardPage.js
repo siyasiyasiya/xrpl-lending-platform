@@ -21,14 +21,25 @@ const DashboardPage = () => {
         <p>Wallet Address: {currentUser?.walletAddress}</p>
       </div>
       
-      <div className="dashboard-grid">
-        <div className="dashboard-column">
+      {/* Horizontal cards section */}
+      <div className="horizontal-cards-row">
+        <div className="card-container">
           <CreditScore />
+        </div>
+        <div className="card-container">
           <LoanApplication onLoanCreated={handleLoanCreated} />
         </div>
-        
-        <div className="dashboard-column">
-          <LoanList key={refreshLoans} />
+      </div>
+      
+      {/* Loan list section */}
+      <div className="loan-list-section">
+        <LoanList key={refreshLoans} />
+      </div>
+      
+      <div className="dashboard-footer">
+        <div className="footer-info">
+          <div className="user-info">Current User's Login: siyasiyasiya</div>
+          <div className="last-updated">Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): 2025-08-12 19:43:38</div>
         </div>
       </div>
     </div>

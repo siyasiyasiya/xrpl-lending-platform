@@ -40,7 +40,7 @@ router.post('/apply', [
 router.get('/my-loans', auth, async (req, res) => {
   try {
     const walletAddress = req.user.walletAddress;
-    const loans = await loanService.getLoansByWallet(walletAddress);
+    const loans = await loanService.getBorrowerLoans(walletAddress);
     res.status(200).json(loans);
   } catch (error) {
     console.error('Error fetching loans:', error);

@@ -17,11 +17,28 @@ const LoanApplication = ({ onLoanCreated }) => {
   const [riskScore, setRiskScore] = useState(null);
   const [riskProfile, setRiskProfile] = useState(null);
   const [collateralRatio, setCollateralRatio] = useState(0);
-  const [timestamp, setTimestamp] = useState("2025-08-12 19:34:36");
+  const [timestamp, setTimestamp] = useState("2025-08-12 19:38:21");
+  const [isWaitingForData, setIsWaitingForData] = useState(true);
 
-  // Load risk score and terms from session storage
+  // Check for risk data in session storage - with polling if needed
   useEffect(() => {
-    // Check if we have cached data in session storage first
+    // Initial check
+    checkStorageForRiskData();
+    
+    // Set up polling if data isn't available yet
+    const intervalId = setInterval(() => {
+      const dataFound = checkStorageForRiskData();
+      if (dataFound) {
+        clearInterval(intervalId);
+      }
+    }, 1000); // Check every second
+    
+    // Clean up the interval on unmount
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Check session storage and retrieve risk data if available
+  const checkStorageForRiskData = () => {
     const cachedScore = sessionStorage.getItem('user_risk_score');
     const cachedTerms = sessionStorage.getItem('user_loan_terms');
     const cachedTimestamp = sessionStorage.getItem('risk_score_last_updated');
@@ -34,96 +51,12 @@ const LoanApplication = ({ onLoanCreated }) => {
       if (cachedTimestamp) {
         setTimestamp(cachedTimestamp);
       }
-    } else {
-      // If no cached data, fetch from API
-      fetchRiskData();
-    }
-  }, []);
-
-  // Fetch risk score data if not in session storage
-  const fetchRiskData = async () => {
-    try {
-      const response = await api.get('/user/credit-score');
       
-      if (response.data && typeof response.data.risk_score === 'number') {
-        const score = response.data.risk_score;
-        setRiskScore(score);
-        
-        // Calculate and set risk profile
-        const profile = getLoanTerms(score);
-        setRiskProfile(profile);
-        
-        // Save to session storage
-        sessionStorage.setItem('user_risk_score', score.toString());
-        sessionStorage.setItem('user_loan_terms', JSON.stringify(profile));
-        
-        // Update timestamp
-        const now = new Date();
-        const currentTimestamp = now.toISOString().replace('T', ' ').substring(0, 19);
-        setTimestamp(currentTimestamp);
-        sessionStorage.setItem('risk_score_last_updated', currentTimestamp);
-      } else {
-        throw new Error('Invalid response format');
-      }
-    } catch (error) {
-      console.error('Error fetching risk score:', error);
-      setError('Failed to load your risk profile. Please try again later.');
+      setIsWaitingForData(false);
+      return true;
     }
-  };
-
-  // Get loan terms based on PCA score - matching the CreditScore component
-  const getLoanTerms = (pcaScore) => {
-    if (pcaScore <= 36.2) { // Very Low Risk
-      return {
-        category: 'Very Low Risk',
-        interestRate: 0.12,
-        collateralRatio: 0.60,
-        maxLoanTerm: 90,
-        maxLoanAmount: 1000,
-        eligibleForUndercollateralized: true,
-        color: '#4CAF50'
-      };
-    } else if (pcaScore <= 44.5) { // Low Risk
-      return {
-        category: 'Low Risk',
-        interestRate: 0.18,
-        collateralRatio: 0.70,
-        maxLoanTerm: 60,
-        maxLoanAmount: 750,
-        eligibleForUndercollateralized: true,
-        color: '#8BC34A'
-      };
-    } else if (pcaScore <= 56.5) { // Medium Risk
-      return {
-        category: 'Medium Risk',
-        interestRate: 0.25,
-        collateralRatio: 0.80,
-        maxLoanTerm: 45,
-        maxLoanAmount: 500,
-        eligibleForUndercollateralized: true,
-        color: '#FF9800'
-      };
-    } else if (pcaScore <= 80) { // High Risk - updated to 80 to match
-      return {
-        category: 'High Risk',
-        interestRate: 0.35,
-        collateralRatio: 0.90,
-        maxLoanTerm: 30,
-        maxLoanAmount: 300,
-        eligibleForUndercollateralized: true,
-        color: '#F44336'
-      };
-    } else {
-      return {
-        category: 'Very High Risk',
-        interestRate: 0,
-        collateralRatio: 1.5,
-        maxLoanTerm: 0,
-        maxLoanAmount: 0,
-        eligibleForUndercollateralized: false,
-        color: '#D32F2F'
-      };
-    }
+    
+    return false;
   };
 
   // Handle form input changes
@@ -187,6 +120,23 @@ const LoanApplication = ({ onLoanCreated }) => {
     }
   };
 
+  // Show loading state while waiting for risk data from CreditScore component
+  if (isWaitingForData) {
+    return (
+      <div className="loan-application-card loading-state">
+        <h2>Apply for Undercollateralized Loan</h2>
+        <div className="waiting-for-data">
+          <div className="spinner"></div>
+          <p>Loading your risk profile data...</p>
+        </div>
+        <div className="footer-info">
+          <div className="user-info">Current User's Login: siyasiyasiya</div>
+          <div className="last-updated">Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): {timestamp}</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="loan-application-card">
       <h2>Apply for Undercollateralized Loan</h2>
@@ -199,33 +149,6 @@ const LoanApplication = ({ onLoanCreated }) => {
         </div>
       ) : (
         <>
-          {riskScore && riskProfile && (
-            <div className="risk-profile-summary">
-              <div className="risk-category" style={{ color: riskProfile.color }}>
-                {riskProfile.category}
-              </div>
-              
-              <div className="terms-summary">
-                <div className="term-item">
-                  <span className="term-label">Risk Score:</span>
-                  <span className="term-value">{riskScore}</span>
-                </div>
-                <div className="term-item">
-                  <span className="term-label">Max Loan Amount:</span>
-                  <span className="term-value">{riskProfile.maxLoanAmount} XRP</span>
-                </div>
-                <div className="term-item">
-                  <span className="term-label">Required Collateral:</span>
-                  <span className="term-value">{(riskProfile.collateralRatio * 100).toFixed(0)}%</span>
-                </div>
-                <div className="term-item">
-                  <span className="term-label">Interest Rate:</span>
-                  <span className="term-value">{(riskProfile.interestRate * 100).toFixed(0)}%</span>
-                </div>
-              </div>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label>Loan Amount (XRP)</label>
@@ -339,11 +262,6 @@ const LoanApplication = ({ onLoanCreated }) => {
           </form>
         </>
       )}
-      
-      <div className="footer-info">
-        <div className="user-info">Current User's Login: siyasiyasiya</div>
-        <div className="last-updated">Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): {timestamp}</div>
-      </div>
     </div>
   );
 };
