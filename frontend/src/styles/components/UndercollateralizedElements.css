@@ -1,151 +1,262 @@
-/* Risk category cards */
-.risk-category-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1rem;
+/* UndercollateralizedElements Styling */
+.undercollateralized-info {
+    margin-bottom: 3rem;
   }
   
-  .risk-category-card {
-    border-radius: 8px;
-    padding: 1rem;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
-    background-color: #fff;
+  .info-section {
+    margin-bottom: 4rem;
   }
   
-  .risk-category-card h3 {
-    margin-bottom: 1rem;
-    font-weight: 600;
+  .info-section h2 {
+    color: #1e3a8a;
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
   }
   
-  .very-low-risk { border-left: 4px solid #3b82f6; }
-  .low-risk { border-left: 4px solid #10b981; }
-  .medium-risk { border-left: 4px solid #f59e0b; }
-  .high-risk { border-left: 4px solid #ef4444; }
-  
-  /* Collateral info display */
-  .collateral-info {
-    margin-top: 1rem;
-    padding: 1rem;
-    background-color: #f8fafc;
-    border-radius: 6px;
-  }
-  
-  .ratio-indicator {
-    display: flex;
-    align-items: center;
-    margin-top: 0.5rem;
-  }
-  
-  .ratio-bar {
-    flex: 1;
-    height: 8px;
-    background-color: #e2e8f0;
-    border-radius: 4px;
-    margin: 0 8px;
-    position: relative;
-  }
-  
-  .ratio-marker {
-    width: 12px;
-    height: 12px;
-    background-color: #3b82f6;
-    border-radius: 50%;
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-  }
-  
-  /* Loan terms preview */
-  .loan-terms-preview {
-    margin-top: 1.5rem;
-    padding: 1rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    background-color: #f8fafc;
-  }
-  
-  .preview-title {
-    margin-bottom: 1rem;
+  .info-section p {
+    color: #475569;
     font-size: 1.1rem;
-    font-weight: 600;
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+    max-width: 900px;
   }
   
-  .preview-grid {
-    display: grid;
-    gap: 0.75rem;
+  .info-section ul {
+    color: #475569;
+    font-size: 1.1rem;
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+    padding-left: 1.5rem;
   }
   
-  .preview-row {
-    display: flex;
-    justify-content: space-between;
+  .info-section li {
+    margin-bottom: 0.5rem;
   }
   
-  .preview-row.highlight {
-    font-weight: 600;
-    padding-top: 0.5rem;
-    margin-top: 0.5rem;
-    border-top: 1px dashed #cbd5e1;
-  }
-  
-  /* Comparison table on homepage */
+  /* Comparison Table */
   .comparison-table {
-    margin: 2rem 0;
-    border-radius: 8px;
+    background-color: white;
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    margin: 2rem auto; /* Centers the table */
+    max-width: 1000px; /* Makes it wider but still responsive */
+    width: 100%;
   }
   
-  .comparison-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+  .comparison-table h3 {
+    background-color: #f8fafc;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e2e8f0;
+    color: #1e3a8a;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    text-align: center; /* Center the heading */
   }
   
-  .comparison-header {
-    background-color: #1e293b;
-    color: white;
+  .comparison-table table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Ensures consistent column widths */
   }
   
-  .comparison-cell {
-    padding: 1rem;
+  .comparison-table th,
+  .comparison-table td {
+    text-align: left;
+    padding: 1.5rem 2rem;
     border-bottom: 1px solid #e2e8f0;
   }
   
-  .comparison-row:last-child .comparison-cell {
+  .comparison-table th {
+    color: #1e3a8a;
+    font-weight: 600;
+    background-color: #f8fafc;
+  }
+  
+  .comparison-table th:first-child {
+    width: 30%; /* Feature column width */
+  }
+  
+  .comparison-table th:nth-child(2),
+  .comparison-table th:nth-child(3) {
+    width: 35%; /* Equal width for comparison columns */
+  }
+  
+  .comparison-table td {
+    color: #475569;
+    vertical-align: middle;
+  }
+  
+  .comparison-table tr:last-child td {
     border-bottom: none;
   }
   
-  .comparison-cell.highlight {
-    background-color: #f0f9ff;
+  .comparison-table th:last-child,
+  .comparison-table td:last-child {
+    color: #3b82f6;
     font-weight: 600;
   }
   
-  /* Process steps */
+  /* Risk Categories */
+  .risk-category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+  
+  .risk-category-card {
+    background-color: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease;
+    border-top: 4px solid;
+  }
+  
+  .risk-category-card:hover {
+    transform: translateY(-5px);
+  }
+  
+  .risk-category-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    color: #1e3a8a;
+  }
+  
+  .risk-category-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .risk-category-card li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .risk-category-card li:last-child {
+    border-bottom: none;
+  }
+  
+  .very-low-risk { border-color: #22c55e; }
+  .low-risk { border-color: #3b82f6; }
+  .medium-risk { border-color: #f59e0b; }
+  .high-risk { border-color: #ef4444; }
+  
+  /* Process Steps */
   .process-steps {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
   }
   
   .process-step {
-    border-radius: 8px;
-    padding: 1.5rem;
-    background-color: #fff;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+    background-color: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    text-align: center;
     position: relative;
+    transition: transform 0.3s ease;
+  }
+  
+  .process-step:hover {
+    transform: translateY(-5px);
   }
   
   .step-number {
-    position: absolute;
-    top: -15px;
-    left: 20px;
-    width: 30px;
-    height: 30px;
-    background-color: #3b82f6;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #4f46e5, #3b82f6);
     color: white;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
+    font-weight: 700;
+    margin: 0 auto 1rem;
+  }
+  
+  .process-step h3 {
+    color: #1e3a8a;
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .process-step p {
+    color: #475569;
+    margin: 0;
+    font-size: 1rem;
+  }
+  
+  /* Helper Classes */
+  .mt-4 {
+    margin-top: 2rem;
+  }
+  
+  .w-100 {
+    width: 100%;
+  }
+  
+  /* Responsive Adjustments */
+  @media (max-width: 768px) {
+    .info-section h2 {
+      font-size: 1.75rem;
+    }
+    
+    /* Stack table on mobile */
+    .comparison-table table, 
+    .comparison-table thead, 
+    .comparison-table tbody, 
+    .comparison-table th, 
+    .comparison-table td, 
+    .comparison-table tr {
+      display: block;
+    }
+    
+    .comparison-table thead tr {
+      position: absolute;
+      top: -9999px;
+      left: -9999px;
+    }
+    
+    .comparison-table tr {
+      margin-bottom: 1rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .comparison-table tr:last-child {
+      border-bottom: none;
+    }
+    
+    .comparison-table td {
+      border: none;
+      position: relative;
+      padding-left: 50%;
+      text-align: right;
+    }
+    
+    .comparison-table td:before {
+      position: absolute;
+      top: 1.25rem;
+      left: 1.25rem;
+      width: 45%;
+      white-space: nowrap;
+      font-weight: 600;
+      text-align: left;
+    }
+    
+    /* Labels for mobile view */
+    .comparison-table td:nth-of-type(1):before { content: "Feature"; }
+    .comparison-table td:nth-of-type(2):before { content: "Traditional DeFi"; }
+    .comparison-table td:nth-of-type(3):before { content: "Our Platform"; }
+    
+    .process-steps,
+    .risk-category-grid {
+      grid-template-columns: 1fr;
+    }
   }

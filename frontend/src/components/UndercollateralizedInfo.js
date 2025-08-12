@@ -11,7 +11,7 @@ const UndercollateralizedInfo = () => {
           Our platform is different - we use your on-chain reputation and credit score to allow you to borrow more than you deposit as collateral.
         </p>
         
-        <div className="comparison-table mt-4">
+        <div className="comparison-table mt-12">
           <h3>Comparison with Traditional DeFi</h3>
           <table className="w-100">
             <thead>

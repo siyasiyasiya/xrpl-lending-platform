@@ -15,7 +15,7 @@ const HowItWorksPage = () => {
       
       <div className="cta-container">
         <h2>Ready to get started?</h2>
-        <Link to="/" className="btn btn-primary">Connect Your Wallet</Link>
+        <Link to="/" className="btn">Connect Your Wallet</Link>
       </div>
     </div>
   );
