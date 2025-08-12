@@ -12,11 +12,6 @@ const HowItWorksPage = () => {
       </div>
       
       <UndercollateralizedInfo />
-      
-      <div className="cta-container">
-        <h2>Ready to get started?</h2>
-        <Link to="/" className="btn">Connect Your Wallet</Link>
-      </div>
     </div>
   );
 };
