@@ -16,6 +16,7 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.17.1",
+    "react-qr-code": "^2.0.18",
     "xrpl": "^4.4.0",
     "xumm-sdk": "^1.11.2"
   }

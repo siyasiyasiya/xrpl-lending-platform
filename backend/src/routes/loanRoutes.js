@@ -4,24 +4,35 @@ const loanService = require('../services/loanService');
 const authMiddleware = require('../middlewares/auth');
 
 // Apply for a loan
-router.post('/apply', authMiddleware, async (req, res) => {
-  try {
-    const { amount, collateralAmount, term } = req.body;
-    const walletAddress = req.user.walletAddress;
-    
-    const loan = await loanService.applyForLoan(
-      walletAddress, 
-      amount, 
-      collateralAmount,
-      term
-    );
-    
-    res.status(201).json(loan);
-  } catch (error) {
-    console.error('Error applying for loan:', error);
-    res.status(500).json({ error: 'Failed to process loan application' });
-  }
-});
+router.post('/apply', authMiddleware, [
+    check('amount', 'Amount is required').isNumeric(),
+    check('term', 'Term in days is required').isNumeric(),
+    check('collateralAmount', 'Collateral amount is required').isNumeric(),
+    validate
+  ], async (req, res) => {
+    try {
+      const { amount, term, collateralAmount } = req.body;
+      
+      // Ensure collateral is less than loan amount (undercollateralized check)
+      if (parseFloat(collateralAmount) >= parseFloat(amount)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'For undercollateralized loans, collateral must be less than loan amount' 
+        });
+      }
+      
+      const result = await loanService.createLoanApplication(
+        req.user.walletAddress,
+        amount,
+        term,
+        collateralAmount
+      );
+      
+      res.json({ success: true, data: result });
+    } catch (error) {
+      res.status(400).json({ success: false, message: error.message });
+    }
+  });
 
 // Get loans for current user
 router.get('/my-loans', authMiddleware, async (req, res) => {

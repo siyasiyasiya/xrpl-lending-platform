@@ -1,0 +1,89 @@
+.credit-score-container {
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  
+  .credit-score-circle {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 0 auto;
+  }
+  
+  .credit-score-circle svg {
+    transform: rotate(-90deg);
+    overflow: visible;
+  }
+  
+  .credit-score-circle circle {
+    fill: none;
+    stroke-width: 12;
+  }
+  
+  .credit-score-bg {
+    stroke: rgba(229, 231, 235, 0.5);
+  }
+  
+  .credit-score-progress {
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s ease-in-out;
+  }
+  
+  .credit-score-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5rem;
+    font-weight: 700;
+  }
+  
+  .credit-score-label {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-top: 0.5rem;
+  }
+  
+  .credit-score-excellent .credit-score-progress { stroke: #10b981; }
+  .credit-score-good .credit-score-progress { stroke: #3b82f6; }
+  .credit-score-fair .credit-score-progress { stroke: #f59e0b; }
+  .credit-score-poor .credit-score-progress { stroke: #ef4444; }
+  
+  .credit-score-excellent .credit-score-value { color: #10b981; }
+  .credit-score-good .credit-score-value { color: #3b82f6; }
+  .credit-score-fair .credit-score-value { color: #f59e0b; }
+  .credit-score-poor .credit-score-value { color: #ef4444; }
+  
+  .credit-score-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-top: 2rem;
+    text-align: left;
+  }
+  
+  .credit-factor {
+    padding: 1rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .credit-factor-label {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+  }
+  
+  .credit-factor-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+  
+  .credit-factor-excellent { color: #10b981; }
+  .credit-factor-good { color: #3b82f6; }
+  .credit-factor-fair { color: #f59e0b; }
+  .credit-factor-poor { color: #ef4444; }

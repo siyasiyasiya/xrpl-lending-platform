@@ -6,5 +6,9 @@ module.exports = {
   mlApiUrl: process.env.ML_API_URL,
   xummApiKey: process.env.XUMM_API_KEY,
   xummApiSecret: process.env.XUMM_API_SECRET,
-  mongoURI: process.env.MONGODB_URI
+  mongoURI: process.env.MONGODB_URI,
+  rippleNode: process.env.RIPPLE_NODE,
+  platformEscrowAddress: process.env.PLATFORM_ESCROW_ADDRESS,
+  platformTreasuryAddress: process.env.PLATFORM_TREASURY_ADDRESS,
+  platformRepaymentAddress: process.env.PLATFORM_REPAYMENT_ADDRESS,
 };

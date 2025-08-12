@@ -1,0 +1,107 @@
+.loan-details-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+  
+  .loan-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  
+  .loan-details-section {
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .loan-details-section:last-child {
+    border-bottom: none;
+  }
+  
+  .loan-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .loan-info-item {
+    background-color: var(--light);
+    padding: 1rem;
+    border-radius: var(--radius-md);
+  }
+  
+  .loan-info-label {
+    font-size: var(--font-size-sm);
+    color: var(--medium);
+    margin-bottom: 0.5rem;
+  }
+  
+  .loan-info-value {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--dark);
+  }
+  
+  .repayment-progress {
+    margin-top: 1rem;
+  }
+  
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+  
+  .repayment-amounts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  
+  .repayment-label {
+    display: block;
+    font-size: var(--font-size-sm);
+    color: var(--medium);
+  }
+  
+  .repayment-value {
+    font-weight: 600;
+  }
+  
+  .payment-history {
+    margin-top: 1rem;
+    overflow-x: auto;
+  }
+  
+  .transaction-links {
+    margin-top: 1rem;
+  }
+  
+  .transaction-item {
+    margin-bottom: 0.75rem;
+  }
+  
+  .transaction-label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+  }
+  
+  .transaction-link {
+    font-family: monospace;
+    word-break: break-all;
+    color: var(--primary);
+  }
+  
+  @media (max-width: 768px) {
+    .loan-info-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .repayment-amounts {
+      grid-template-columns: 1fr;
+    }
+  }
