@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../utils/AuthContext';
 import { loans } from '../utils/api';
 import { Link } from 'react-router-dom';
+import '../styles/components/LoanList.css';
 
 const LoanList = () => {
   const { currentUser } = useAuth();
   const [myLoans, setMyLoans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [timestamp] = useState("2025-08-12 20:37:23");
   
   useEffect(() => {
     const fetchLoans = async () => {
@@ -29,8 +31,6 @@ const LoanList = () => {
   }, [currentUser]);
   
   if (!currentUser) return null;
-  if (loading) return <div className="loading">Loading your loans...</div>;
-  if (error) return <div className="error-message">{error}</div>;
   
   // Helper function to format date
   const formatDate = (dateString) => {
@@ -48,17 +48,37 @@ const LoanList = () => {
     }
   };
   
+  // // Handle retry button click
+  // const handleRetry = () => {
+  //   setLoading(true);
+  //   setError(null);
+  //   fetchLoans();
+  // };
+  
   return (
-    <div className="loan-list-container">
+    <div className="loan-list-card">
       <h2>Your Loans</h2>
       
-      {myLoans.length === 0 ? (
+      {loading ? (
+        <div className="loading-indicator">
+          <div className="spinner"></div>
+          <p>Loading your loans...</p>
+        </div>
+      ) : error ? (
+        <div className="error-message">
+          <div className="error-icon">!</div>
+          <p>{error}</p>
+        </div>
+      ) : myLoans.length === 0 ? (
         <div className="no-loans">
+          <div className="empty-state-icon">📝</div>
+          <h3>No Active Loans</h3>
           <p>You don't have any loans yet.</p>
+          <p>Apply for an undercollateralized loan to get started!</p>
         </div>
       ) : (
-        <div className="loans-table-container">
-          <table className="loans-table">
+        <div className="loan-container">
+          <table className="loan-table">
             <thead>
               <tr>
                 <th>ID</th>
@@ -73,7 +93,7 @@ const LoanList = () => {
             <tbody>
               {myLoans.map(loan => (
                 <tr key={loan._id}>
-                  <td>{loan._id.substring(0, 8)}...</td>
+                  <td className="loan-id">{loan._id.substring(0, 8)}...</td>
                   <td>{loan.amount} XRP</td>
                   <td>{loan.collateralAmount} XRP</td>
                   <td>{(loan.interestRate * 100).toFixed(2)}%</td>
@@ -84,9 +104,14 @@ const LoanList = () => {
                     </span>
                   </td>
                   <td>
-                    <Link to={`/loans/${loan._id}`} className="view-button">
+                    <Link to={`/loans/${loan._id}`} className="view-details-btn">
                       View Details
                     </Link>
+                    {loan.status === 'ACTIVE' && (
+                      <Link to={`/loans/${loan._id}/repay`} className="repay-btn">
+                        Repay Loan
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}
