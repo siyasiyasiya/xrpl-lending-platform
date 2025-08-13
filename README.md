@@ -44,30 +44,31 @@ Our ML model analyzes a user's on-chain history to generate a dynamic credit sco
 
 Our protocol is designed to leverage the best of both worlds: the immutable truth of the blockchain and the computational power of off-chain services.
 
-```
-+------------------+ (3. Get Loan Terms) +-------------------+
-| | <--------------------------- | |
-| React Frontend | | ML Risk Engine |
-| | ---------------------------> | (Off-Chain) |
-+--------+---------+ (1. Apply for Loan) +-------------------+
-|
-| (2. API Calls)
-v
-+--------+------------------------------------+ (4. Create & Sign Payloads) +-------------+
-| | <-----------------------------+ |
-| Node.js Backend (Express) | | Xumm Wallet |
-| - LoanService (Business Logic) | ------------------------------> | (User signs) |
-| - XRPLService (On-Chain Interaction) | (5. Present Payload QR) +------+--------+
-| - XummSubscriptionHandler (Event Listener) | |
-+----------------------+----------------------+ | (6. Submit Signed Tx)
-| v
-| (7. Read/Write Data) +-----------------+----------------+
-v | |
-+----------------------+----------------------+ | XRP Ledger (Testnet) |
-| | | - Escrows |
-| MongoDB Database | | - Payments |
-| (User & Loan State) | | - Memos |
-+---------------------------------------------+ +----------------------------------+
+```mermaid
+graph TD;
+    subgraph "User Interface"
+        A[React Frontend]
+        B[Xumm Wallet]
+    end
+
+    subgraph "Off-Chain Services"
+        C[Node.js Backend]
+        D[ML Risk Engine]
+        E[MongoDB Database]
+    end
+
+    subgraph "On-Chain"
+        F[XRP Ledger]
+    end
+
+    A -- "1. Apply for Loan (API Call)" --> C;
+    C -- "2. Get Risk Score" --> D;
+    D -- "3. Return Loan Terms" --> C;
+    C -- "4. Create & Return Xumm Payload" --> A;
+    A -- "5. User scans QR to sign" --> B;
+    B -- "6. Submits Signed Transaction" --> F;
+    C -- "7. Listens for On-Chain Event" --> F;
+    C -- "8. Writes Final State" --> E;
 ```
 
 ## Core XRPL Features Utilized
