@@ -32,16 +32,20 @@ Our ML model analyzes a user's on-chain history to generate a dynamic credit sco
 
 ## Tech Stack
 
+```
 | Frontend                                                                                                 | Backend                                                                                                | Blockchain & Database                                                                                             |
 | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
 | ![React](https://img.shields.io/badge/-React-61DAFB?logo=react&logoColor=white)                           | ![Node.js](https://img.shields.io/badge/-Node.js-339933?logo=node.js&logoColor=white)                   | ![XRPL](https://img.shields.io/badge/-XRPL-000000?logo=ripple&logoColor=white)                                     |
 | ![React Router](https://img.shields.io/badge/-React_Router-CA4245?logo=react-router&logoColor=white)      | ![Express](https://img.shields.io/badge/-Express-000000?logo=express&logoColor=white)                   | ![MongoDB](https://img.shields.io/badge/-MongoDB-47A248?logo=mongodb&logoColor=white)                             |
 | ![Axios](https://img.shields.io/badge/-Axios-5A29E4)                                                      | ![JWT](https://img.shields.io/badge/-JWT-000000?logo=json-web-tokens&logoColor=white)                    | ![Xumm](https://img.shields.io/badge/-Xumm_SDK-FFD700)                                                             |
 | ![CSS3](https://img.shields.io/badge/-CSS3-1572B6?logo=css3&logoColor=white)                               | ![Mongoose](https://img.shields.io/badge/-Mongoose-880000)                                             |                                                                                                                   |
+```
 
 ## Architecture: A Hybrid On-Chain & Off-Chain System
 
 Our protocol is designed to leverage the best of both worlds: the immutable truth of the blockchain and the computational power of off-chain services.
+
+```
 +------------------+ (3. Get Loan Terms) +-------------------+
 | | <--------------------------- | |
 | React Frontend | | ML Risk Engine |
@@ -65,7 +69,7 @@ v | |
 | MongoDB Database | | - Payments |
 | (User & Loan State) | | - Memos |
 +---------------------------------------------+ +----------------------------------+
-
+```
 
 ## Core XRPL Features Utilized
 
