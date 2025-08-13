@@ -36,13 +36,10 @@ const loanSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
-  repaymentHistory: [{
-    amount: Number,
-    date: {
-      type: Date,
-      default: Date.now
-    }
-  }]
+  collateralTxHash: String,
+  escrowSequence: Number,
+  escrowPayloadId: String,
+  repaymentTxHash: String
 });
 
 module.exports = mongoose.model('Loan', loanSchema);

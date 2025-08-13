@@ -1,129 +1,99 @@
-const { RippleAPI } = require('ripple-lib');
 const { XummSdk } = require('xumm-sdk');
+const xrpl = require('xrpl'); // <-- 1. CHANGE: Import the new library
 const config = require('../config/config');
 
 class XRPLService {
   constructor() {
-    this.api = new RippleAPI({ server: config.rippleNode });
+    // 2. CHANGE: Instantiate the modern xrpl.Client
+    this.api = new xrpl.Client(config.rippleNode);
     this.xumm = new XummSdk(config.xummApiKey, config.xummApiSecret);
   }
-  
+
   async connect() {
     if (!this.api.isConnected()) {
       await this.api.connect();
+      console.log(`✅ Connected to XRPL at ${config.rippleNode}`);
     }
   }
-  
-  // Wallet connection via XUMM (already implemented)
-  
-  // Collateral escrow methods
-  async createCollateralEscrow(walletAddress, collateralAmount, loanTermInDays) {
-    await this.connect();
-    const loanDurationInSeconds = loanTermInDays * 86400;
-    const releaseDate = Math.floor(Date.now() / 1000) + loanDurationInSeconds;
-    
-    const escrowCreateTx = {
-      TransactionType: 'EscrowCreate',
-      Account: walletAddress,
-      Amount: this.api.xrpToDrops(collateralAmount.toString()),
-      FinishAfter: releaseDate,
-      Destination: config.platformEscrowAddress
-    };
-    
+
+  async disconnect() {
+    if (this.api.isConnected()) {
+      await this.api.disconnect();
+      console.log('🔌 Disconnected from XRPL');
+    }
+  }
+
+  async createCollateralEscrowPayload(borrowerAddress, collateralAmount, termDays) {
+    const releaseDate = new Date();
+    releaseDate.setDate(releaseDate.getDate() + termDays);
+    const rippleEpochOffset = 946684800;
+    const releaseAfter = Math.floor(releaseDate.getTime() / 1000) - rippleEpochOffset;
+
     const payload = await this.xumm.payload.create({
-      txjson: escrowCreateTx,
-      custom_meta: {
-        instruction: 'Please sign to lock your collateral in escrow',
-        blob: { loanId: 'LOAN_ID_HERE' }
+      txjson: {
+        TransactionType: 'EscrowCreate',
+        Account: borrowerAddress,
+        Amount: xrpl.xrpToDrops(collateralAmount), // <-- Use xrpl.js utility
+        Destination: config.platformEscrowAddress,
+        FinishAfter: releaseAfter,
       }
     });
-    
     return payload;
   }
-  
-  // Loan disbursement
-  async createLoanDisbursement(borrowerAddress, loanAmount, loanId) {
-    await this.connect();
-    
-    const paymentTx = {
-      TransactionType: 'Payment',
-      Account: config.platformTreasuryAddress,
-      Destination: borrowerAddress,
-      Amount: this.api.xrpToDrops(loanAmount.toString()),
-      Memos: [{
-        Memo: {
-          MemoData: Buffer.from(`Loan ID: ${loanId}`).toString('hex')
-        } 
-      }]
-    };
-    
-    // This would be signed by your platform's treasury account
-    // For a hackathon, you might simulate this with mock data
-    return paymentTx;
+
+  async verifySignature(payloadId) {
+    // This function doesn't need to change, it uses the Xumm SDK
+    const payload = await this.xumm.payload.get(payloadId);
+    if (payload.meta.signed === true) {
+      return {
+        signed: true,
+        txid: payload.response.txid,
+        user: payload.response.account
+      };
+    }
+    return { signed: false };
   }
-  
-  // Monitor for repayments
-  async setupRepaymentMonitoring() {
+
+  // 3. CHANGE: This is the fully rewritten disburseLoan method
+  async disburseLoan(borrowerAddress, loanAmount) {
     await this.connect();
-    
-    this.api.connection.on('transaction', (tx) => {
-      if (tx.transaction.TransactionType === 'Payment' && 
-          tx.transaction.Destination === config.platformRepaymentAddress) {
-        
-        const amount = this.api.dropsToXrp(tx.transaction.Amount);
-        const sender = tx.transaction.Account;
-        
-        // Find which loan this repayment belongs to
-        // Update loan repayment status in your database
-        console.log(`Received repayment of ${amount} XRP from ${sender}`);
-      }
-    });
-  }
-  
-  // Release collateral after successful repayment
-  async releaseCollateral(escrowSequence, borrowerAddress) {
-    await this.connect();
-    
-    const finishTx = {
-      TransactionType: 'EscrowFinish',
-      Account: config.platformEscrowAddress,
-      Owner: borrowerAddress,
-      OfferSequence: escrowSequence
-    };
-    
-    // This would need to be signed by your platform's escrow account
-    return finishTx;
-  }
-  
-  // Calculate credit score based on XRP Ledger history
-  async calculateCreditScore(walletAddress) {
-    await this.connect();
-    
     try {
-      const accountInfo = await this.api.getAccountInfo(walletAddress);
-      const txHistory = await this.api.getTransactions(walletAddress, {
-        limit: 100,
-        earliestFirst: false
-      });
-      
-      // Simple scoring algorithm for demo purposes
-      let score = 500; // Base score
-      
-      // Account age (based on sequence number)
-      score += Math.min(accountInfo.sequence / 10, 100);
-      
-      // Account balance
-      const balance = parseFloat(accountInfo.xrpBalance);
-      score += Math.min(balance / 100, 100);
-      
-      // Transaction history
-      score += Math.min(txHistory.length * 2, 150);
-      
-      // Cap at 850
-      return Math.min(Math.round(score), 850);
+      // Create a wallet instance from your secret. This is where signing power comes from.
+      const wallet = xrpl.Wallet.fromSeed(config.platformEscrowSecret);
+
+      const paymentTx = {
+        TransactionType: 'Payment',
+        // Best practice: Use the address derived from the wallet to prevent mismatches
+        Account: wallet.address,
+        Amount: xrpl.xrpToDrops(loanAmount), // Use the utility for safety and clarity
+        Destination: borrowerAddress,
+      };
+
+      // Prepare the transaction (autofills sequence number, fees, etc.)
+      const prepared = await this.api.autofill(paymentTx);
+
+      // Sign the prepared transaction using the wallet
+      const signed = wallet.sign(prepared);
+      const txHash = signed.hash;
+
+      console.log(`[INFO] Submitting disbursement transaction with hash: ${txHash}`);
+
+      // Submit the signed transaction blob
+      const result = await this.api.submit(signed.tx_blob);
+
+      // Check the final result
+      if (result.result.engine_result === 'tesSUCCESS') {
+        console.log('[SUCCESS] Disbursement successful.');
+        return { success: true, txHash: txHash };
+      } else {
+        throw new Error(`On-chain disbursement failed: ${result.result.engine_result_message}`);
+      }
     } catch (error) {
-      console.error('Error calculating credit score:', error);
-      return 0;
+      console.error('CRITICAL ERROR during disbursement:', error);
+      throw error; // Re-throw to ensure the calling service knows about the failure
+    } finally {
+      // Ensure we always disconnect
+      await this.disconnect();
     }
   }
 }

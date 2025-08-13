@@ -132,19 +132,25 @@
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     border: 1px solid #e2e8f0;
+    table-layout: fixed;
+  }
+  
+  /* Set column widths */
+  .loan-table th {
+    padding: 0.5rem .5rem;
+    text-align: left;
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.875rem;
+    border-bottom: 1px solid #e2e8f0;
   }
   
   .loan-table thead {
     background-color: #f8fafc;
   }
   
-  .loan-table th {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    font-weight: 600;
-    color: #475569;
-    font-size: 0.875rem;
-    border-bottom: 1px solid #e2e8f0;
+  .loan-table th.id-column {
+    width: 15%;
   }
   
   .loan-table tbody tr {
@@ -164,12 +170,44 @@
     padding: 1rem;
     font-size: 0.9375rem;
     color: #334155;
+    word-break: break-all;
   }
   
+  /* Loan ID styling */
   .loan-id {
     font-family: monospace;
     font-size: 0.875rem;
+    color: #374151;
+    overflow-wrap: break-word;
+    word-break: break-all;
+  }
+  
+  .id-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .full-id {
+    flex-grow: 1;
+    word-break: break-all;
+  }
+  
+  .copy-id-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
     color: #6b7280;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.15s ease;
+    flex-shrink: 0;
+  }
+  
+  .copy-id-btn:hover {
+    background-color: #e5e7eb;
+    color: #4b5563;
   }
   
   /* Status Badges */
@@ -252,6 +290,12 @@
   }
   
   /* Responsive Adjustments */
+  @media (max-width: 1280px) {
+    .loan-table th.id-column {
+      width: 25%;
+    }
+  }
+  
   @media (max-width: 1024px) {
     .loan-table th:nth-child(3),
     .loan-table th:nth-child(4),

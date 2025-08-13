@@ -30,8 +30,13 @@ export const auth = {
 };
 
 export const loans = {
-  applyForLoan: async (amount, collateralAmount, term) => {
-    const response = await api.post('/loans/apply', { amount, collateralAmount, term });
+  applyForLoan: async (loanData) => {
+    const response = await api.post('/loans/apply', loanData);
+    return response.data;
+  },
+  executeLoan: async (loanId) => {
+    // This calls the backend to get the Xumm payload for signing.
+    const response = await api.post(`/loans/${loanId}/execute`);
     return response.data;
   },
   getMyLoans: async () => {

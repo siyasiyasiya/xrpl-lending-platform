@@ -37,6 +37,88 @@ router.post('/apply', [
     }
   });
 
+  router.post('/:id/execute', auth, async (req, res) => {
+    try {
+      const { payloadId } = req.body;
+      const loanId = req.params.id;
+      const walletAddress = req.user.walletAddress;
+  
+      if (!payloadId) {
+        return res.status(400).json({ message: 'Payload ID is required.' });
+      }
+  
+      const activatedLoan = await loanService.executeLoan(loanId, payloadId, walletAddress);
+      res.status(200).json({ success: true, data: activatedLoan });
+    } catch (error) {
+      console.error(`Error executing loan ${req.params.id}:`, error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  /**
+   * Subscribe to loan signature events
+   */
+  router.post('/:id/subscribe', async (req, res) => {
+    try {
+      const loanId = req.params.id;
+      
+      // Optional: Add authorization check
+      // const loan = await loanService.getLoanById(loanId);
+      // if (loan.borrower !== req.user.walletAddress) {
+      //   return res.status(403).json({ success: false, message: 'Not authorized' });
+      // }
+      
+      const result = await loanService.subscribeToLoanSignature(loanId);
+      
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          message: 'Subscription created successfully' 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          message: result.error 
+        });
+      }
+    } catch (error) {
+      console.error('Error creating subscription:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message 
+      });
+    }
+  });
+
+  /**
+   * Verify loan signature manually
+   */
+  router.post('/:id/verify', async (req, res) => {
+    try {
+      const loanId = req.params.id;
+      const result = await loanService.verifyLoanSignature(loanId);
+      
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          loan: result.loan 
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: result.message,
+          payloadStatus: result.payloadStatus 
+        });
+      }
+    } catch (error) {
+      console.error('Error verifying signature:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message 
+      });
+    }
+  });
+
 // Get loans for current user
 router.get('/my-loans', auth, async (req, res) => {
   try {

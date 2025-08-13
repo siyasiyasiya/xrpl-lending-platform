@@ -11,4 +11,7 @@ module.exports = {
   platformEscrowAddress: process.env.PLATFORM_ESCROW_ADDRESS,
   platformTreasuryAddress: process.env.PLATFORM_TREASURY_ADDRESS,
   platformRepaymentAddress: process.env.PLATFORM_REPAYMENT_ADDRESS,
+  platformEscrowSecret: process.env.PLATFORM_ESCROW_SECRET,
+  platformTreasurySecret: process.env.PLATFORM_TREASURY_SECRET,
+  platformRepaymentSecret: process.env.PLATFORM_REPAYMENT_SECRET,
 };

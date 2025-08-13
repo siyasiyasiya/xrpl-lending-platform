@@ -9,26 +9,27 @@ const LoanList = () => {
   const [myLoans, setMyLoans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [timestamp] = useState("2025-08-12 20:37:23");
+  const [timestamp] = useState("2025-08-12 20:43:58");
+  
+  // Define fetchLoans outside useEffect so it can be called from handleRetry
+  const fetchLoans = async () => {
+    if (!currentUser) return;
+    
+    try {
+      setLoading(true);
+      const data = await loans.getMyLoans();
+      setMyLoans(data);
+    } catch (error) {
+      console.error('Error fetching loans:', error);
+      setError('Failed to load your loans');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   useEffect(() => {
-    const fetchLoans = async () => {
-      if (!currentUser) return;
-      
-      try {
-        setLoading(true);
-        const data = await loans.getMyLoans();
-        setMyLoans(data);
-      } catch (error) {
-        console.error('Error fetching loans:', error);
-        setError('Failed to load your loans');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchLoans();
-  }, [currentUser]);
+  }, [currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
   
   if (!currentUser) return null;
   
@@ -48,12 +49,12 @@ const LoanList = () => {
     }
   };
   
-  // // Handle retry button click
-  // const handleRetry = () => {
-  //   setLoading(true);
-  //   setError(null);
-  //   fetchLoans();
-  // };
+  // Handle retry button click
+  const handleRetry = () => {
+    setLoading(true);
+    setError(null);
+    fetchLoans();
+  };
   
   return (
     <div className="loan-list-card">
@@ -68,6 +69,9 @@ const LoanList = () => {
         <div className="error-message">
           <div className="error-icon">!</div>
           <p>{error}</p>
+          <button onClick={handleRetry} className="retry-button">
+            Retry
+          </button>
         </div>
       ) : myLoans.length === 0 ? (
         <div className="no-loans">
@@ -81,7 +85,7 @@ const LoanList = () => {
           <table className="loan-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th className="id-column">ID</th>
                 <th>Amount</th>
                 <th>Collateral</th>
                 <th>Interest Rate</th>
@@ -93,7 +97,11 @@ const LoanList = () => {
             <tbody>
               {myLoans.map(loan => (
                 <tr key={loan._id}>
-                  <td className="loan-id">{loan._id.substring(0, 8)}...</td>
+                  <td className="loan-id" title={loan._id}>
+                    <div className="id-container">
+                      <span className="full-id">{loan._id}</span>
+                    </div>
+                  </td>
                   <td>{loan.amount} XRP</td>
                   <td>{loan.collateralAmount} XRP</td>
                   <td>{(loan.interestRate * 100).toFixed(2)}%</td>
@@ -119,6 +127,11 @@ const LoanList = () => {
           </table>
         </div>
       )}
+      
+      <div className="footer-info">
+        <div className="user-info">Current User's Login: siyasiyasiya</div>
+        <div className="last-updated">Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): {timestamp}</div>
+      </div>
     </div>
   );
 };

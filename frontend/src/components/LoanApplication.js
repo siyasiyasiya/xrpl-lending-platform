@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../utils/AuthContext';
 import '../styles/components/LoanApplication.css';
+import { Xumm } from 'xumm';
 
 const LoanApplication = ({ onLoanCreated }) => {
   const navigate = useNavigate();
@@ -17,8 +18,16 @@ const LoanApplication = ({ onLoanCreated }) => {
   const [riskScore, setRiskScore] = useState(null);
   const [riskProfile, setRiskProfile] = useState(null);
   const [collateralRatio, setCollateralRatio] = useState(0);
-  const [timestamp, setTimestamp] = useState("2025-08-12 19:38:21");
+  const [timestamp, setTimestamp] = useState("2025-08-12 21:50:31");
   const [isWaitingForData, setIsWaitingForData] = useState(true);
+  
+  // DeFi transaction signing states
+  const [xummPayload, setXummPayload] = useState(null);
+  const [signingStep, setSigningStep] = useState(null); // null, 'ready', 'signing'
+  const [transactionStatus, setTransactionStatus] = useState(null);
+  const [loanData, setLoanData] = useState(null);
+
+  
 
   // Check for risk data in session storage - with polling if needed
   useEffect(() => {
@@ -96,40 +105,130 @@ const LoanApplication = ({ onLoanCreated }) => {
       
       const loanApplicationData = {
         ...formData,
-        walletAddress: currentUser.walletAddress
       };
 
       console.log('Submitting loan application:', loanApplicationData);
       
       // Submit loan application
       const response = await api.post('/loans/apply', loanApplicationData);
+      setLoanData(response.data.data.loan); 
+      setXummPayload(response.data.data.escrowPayload);
 
       console.log('Loan application response:', response);
-      
-      // Notify parent component
-      if (onLoanCreated) {
-        onLoanCreated();
-      }
-      
-      // Clear form
-      setFormData({
-        amount: '',
-        term: 30,
-        collateralAmount: ''
-      });
-      
-      // Show success message
-      setError('');
-      alert('Loan application submitted successfully!');
+      setSigningStep('ready')      
       
     } catch (error) {
+      console.error('Error applying for loan:', error);
       setError(error.response?.data?.message || error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Show loading state while waiting for risk data from CreditScore component
+  const handleActivateLoan = async () => {
+    if (!loanData) return;
+  
+    setSigningStep('signing');
+    setTransactionStatus('Starting backend subscription...');
+  
+    try {
+      // Tell backend to subscribe to this loan's payload
+      await api.post(`/loans/${loanData._id}/subscribe`);
+      console.log("Backend subscription created");
+      
+      // Display QR code and signing UI
+      setTransactionStatus('Waiting for your signature...');
+      
+      // If you need to get the payload details for the QR code
+      if (!xummPayload) {
+        const loanDetails = await api.get(`/loans/${loanData._id}`);
+        if (loanDetails.data.escrowPayload) {
+          setXummPayload(loanDetails.data.escrowPayload);
+        }
+      }
+      
+      // Start polling for loan status changes
+      const interval = setInterval(async () => {
+        try {
+          const updatedLoan = await api.get(`/loans/${loanData._id}`);
+          console.log("Polling loan status:", updatedLoan.data.status);
+          
+          if (updatedLoan.data.status === 'ACTIVE') {
+            clearInterval(interval);
+            setTransactionStatus('Loan successfully activated!');
+            handleCompleteSigningProcess();
+          }
+        } catch (err) {
+          console.error("Polling error:", err);
+        }
+      }, 3000);
+      
+      // Cleanup interval after 5 minutes
+      setTimeout(() => clearInterval(interval), 5 * 60 * 1000);
+      
+    } catch (error) {
+      console.error('Error starting activation:', error);
+      setError(error.response?.data?.message || 'Failed to start activation process.');
+      setSigningStep('ready');
+    }
+  };
+  
+  // Add a manual verification button for your hackathon
+  const handleManualVerification = async () => {
+    try {
+      setTransactionStatus('Manually verifying signature...');
+      
+      const response = await api.post(`/loans/${loanData._id}/verify`);
+      
+      if (response.data.success) {
+        setTransactionStatus('Loan successfully activated!');
+        handleCompleteSigningProcess();
+      } else {
+        setError(response.data.message || 'Verification failed');
+      }
+    } catch (error) {
+      console.error('Manual verification error:', error);
+      setError(error.response?.data?.message || 'Failed to verify signature.');
+    }
+  };
+
+  // Open XUMM app for signing
+  const handleOpenXummApp = () => {
+    if (xummPayload?.next?.always) {
+      setSigningStep('signing');
+      setTransactionStatus('Opening XUMM app...');
+      window.location.href = xummPayload.next.always;
+    }
+  };
+
+  // Handle signing with QR code
+  const handleScanQrCode = () => {
+    setSigningStep('signing');
+    setTransactionStatus('Please scan the QR code with XUMM app');
+  };
+
+  // Complete signing process
+  const handleCompleteSigningProcess = () => {
+    setSigningStep(null);
+    setXummPayload(null);
+    
+    // Notify parent component of loan creation
+    if (onLoanCreated) {
+      onLoanCreated();
+    }
+    
+    // Clear form
+    setFormData({
+      amount: '',
+      term: 30,
+      collateralAmount: ''
+    });
+    
+    // Show success message
+    alert('Transaction signed! Your loan will be activated once the blockchain confirms your collateral transaction.');
+  };
+
+  // Show loading state while waiting for risk data
   if (isWaitingForData) {
     return (
       <div className="loan-application-card loading-state">
@@ -146,6 +245,44 @@ const LoanApplication = ({ onLoanCreated }) => {
     );
   }
 
+  // Show XUMM signing interface when a payload is available
+  if (signingStep) { // Covers 'ready', 'signing', etc.
+    return (
+      <div className="loan-application-card">
+        {signingStep === 'ready' && (
+            <div className="activation-card">
+                <h2>Application Submitted!</h2>
+                <p>Your loan application has been approved based on your risk profile. The final step is to sign the on-chain transaction to lock your collateral.</p>
+                <div className="loan-summary">
+                    <span>Loan Amount: <strong>{loanData.amount} XRP</strong></span>
+                    <span>Collateral: <strong>{loanData.collateralAmount} XRP</strong></span>
+                </div>
+                <button onClick={handleActivateLoan} className="submit-button">
+                    Proceed to Sign
+                </button>
+            </div>
+        )}
+        
+        {signingStep === 'signing' && xummPayload && (
+            <div className="xumm-signing-card">
+              {/* Your existing, excellent Xumm QR code UI goes here */}
+              <h2>Sign Collateral Transaction</h2>
+              <div className="xumm-status">
+                <div className="status-badge">{transactionStatus}</div>
+              </div>
+              <div className="qr-code-wrapper">
+                  <img src={xummPayload.refs.qr_png} alt="XUMM QR Code" />
+              </div>
+              <div className="signing-actions">
+                  <button onClick={handleOpenXummApp}>Open in XUMM App</button>
+              </div>
+            </div>
+        )}
+      </div>
+    );
+  }
+
+  // Normal loan application form
   return (
     <div className="loan-application-card">
       <h2>Apply for Undercollateralized Loan</h2>
@@ -198,7 +335,7 @@ const LoanApplication = ({ onLoanCreated }) => {
                 )}
               </div>
               
-              {/* Simplified collateral ratio display */}
+              {/* Collateral ratio display */}
               {collateralRatio > 0 && (
                 <div className="collateral-info">
                   <div className="ratio-summary">
@@ -224,7 +361,7 @@ const LoanApplication = ({ onLoanCreated }) => {
               </select>
             </div>
             
-            {/* Simplified loan terms preview */}
+            {/* Loan terms preview */}
             {formData.amount && formData.collateralAmount && riskProfile && (
               <div className="loan-terms-preview">
                 <h3>Loan Terms Preview</h3>
@@ -269,8 +406,20 @@ const LoanApplication = ({ onLoanCreated }) => {
               {loading ? 'Processing...' : 'Submit Loan Application'}
             </button>
           </form>
+
+          <div className="defi-notice">
+            <div className="defi-icon">🔄</div>
+            <div className="defi-text">
+              <strong>DeFi Protocol:</strong> This is a fully automated lending protocol. After submitting, you'll sign a transaction to lock your collateral, and your loan will be automatically disbursed upon confirmation.
+            </div>
+          </div>
         </>
       )}
+      
+      <div className="footer-info">
+        <div className="user-info">Current User's Login: siyasiyasiya</div>
+        <div className="last-updated">Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): {timestamp}</div>
+      </div>
     </div>
   );
 };

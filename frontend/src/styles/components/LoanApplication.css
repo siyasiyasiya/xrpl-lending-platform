@@ -307,3 +307,175 @@
       gap: 0.25rem;
     }
   }
+
+  /* XUMM QR Code Modal Styles */
+  .xumm-signing-card {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #e5e7eb;
+  }
+  
+  .xumm-status {
+    margin: 1rem 0;
+    text-align: center;
+  }
+  
+  .status-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background-color: #f0f9ff;
+    color: #0c4a6e;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+  
+  .xumm-payload-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .payload-info {
+    padding: 1rem;
+    background-color: #f8fafc;
+    border-radius: 0.5rem;
+  }
+  
+  .payload-info p {
+    margin: 0.5rem 0;
+    font-size: 0.9375rem;
+  }
+  
+  .qr-code-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 1rem 0;
+  }
+  
+  .qr-code-wrapper h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    color: #334155;
+  }
+  
+  .qr-code-container {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+  
+  .xumm-qr-code {
+    width: 240px;
+    height: 240px;
+    display: block;
+  }
+  
+  .signing-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1rem 0;
+    justify-content: center;
+  }
+  
+  .xumm-open-button,
+  .xumm-scan-button,
+  .xumm-complete-button {
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+  }
+  
+  .xumm-open-button {
+    background-color: #5a51fd;
+    color: white;
+  }
+  
+  .xumm-open-button:hover {
+    background-color: #4840e8;
+    transform: translateY(-1px);
+  }
+  
+  .xumm-scan-button {
+    background-color: #f8fafc;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+  }
+  
+  .xumm-scan-button:hover {
+    background-color: #f1f5f9;
+  }
+  
+  .xumm-complete-button {
+    background-color: #34d399;
+    color: white;
+  }
+  
+  .xumm-complete-button:hover {
+    background-color: #10b981;
+    transform: translateY(-1px);
+  }
+  
+  .signing-help {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background-color: #f8fafc;
+    border-radius: 0.5rem;
+    border-left: 3px solid #64748b;
+  }
+  
+  .signing-help h4 {
+    margin-top: 0;
+    color: #334155;
+    font-size: 0.9375rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .signing-help ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+  }
+  
+  .signing-help li {
+    margin: 0.5rem 0;
+    font-size: 0.875rem;
+  }
+  
+  .signing-help .help-note {
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    font-style: italic;
+    color: #64748b;
+  }
+  
+  /* DeFi Notice */
+  .defi-notice {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    background-color: #f0fdf4;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .defi-icon {
+    font-size: 1.5rem;
+  }
+  
+  .defi-text {
+    font-size: 0.9375rem;
+    color: #166534;
+    line-height: 1.4;
+  }

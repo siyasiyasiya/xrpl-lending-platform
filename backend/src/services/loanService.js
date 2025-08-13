@@ -2,8 +2,15 @@ const Loan = require('../models/Loan');
 const User = require('../models/User');
 const xrplService = require('./xrplService');
 const creditScoreClient = require('./creditScoreClient');
+const XummSubscriptionHandler = require('./xummSubscriptionHandler');
 
 class LoanService {
+  constructor() {
+    this.xummHandler = new XummSubscriptionHandler(
+      process.env.XUMM_API_KEY, 
+      process.env.XUMM_API_SECRET
+    );
+  }
   /**
    * Calculate risk category based on PCA risk score
    * @param {number} pcaScore - The PCA risk score (0-100)
@@ -134,19 +141,127 @@ class LoanService {
 
       await newLoan.save();
       
-      return {
-        loan: newLoan,
-        riskProfile: {
-          category: riskProfile.category,
-          creditScore,
-          collateralRatio: riskProfile.collateralRatio,
-          undercollateralizedAmount: amount - collateralAmount
-        }
-      };
+      const xrplService = require('./xrplService');
+      const escrowPayload = await xrplService.createCollateralEscrowPayload(
+        borrowerWalletAddress,
+        newLoan.collateralAmount,
+        newLoan.term
+      );
+      
+      newLoan.escrowPayloadId = escrowPayload.uuid;
+      await newLoan.save();
+      return { loan: newLoan, escrowPayload };
     } catch (error) {
       console.error('Error creating undercollateralized loan application:', error);
       throw error;
     }
+  }
+
+  /**
+   * Subscribe to loan payload signature events
+   * @param {string} loanId - The loan ID to subscribe to
+   * @returns {Promise<Object>} Subscription result
+   */
+  async subscribeToLoanSignature(loanId) {
+    try {
+      // Get loan from database
+      const loan = await Loan.findById(loanId);
+      if (!loan) {
+        throw new Error('Loan not found');
+      }
+      
+      if (!loan.escrowPayloadId) {
+        throw new Error('No escrow payload ID found for loan');
+      }
+      
+      // Create subscription with callbacks
+      const result = await this.xummHandler.subscribeToPayload(
+        loan.escrowPayloadId,
+        loanId,
+        // onSigned callback
+        async (loanId, payload) => {
+          console.log(`[${new Date().toISOString()}] Processing signed transaction for loan ${loanId}`);
+          await this.executeLoan(loanId, payload.uuid, loan.borrower);
+        },
+        // onRejected callback
+        async (loanId) => {
+          console.log(`[${new Date().toISOString()}] Processing rejected transaction for loan ${loanId}`);
+          await this.rejectLoan(loanId);
+        }
+      );
+      
+      return result;
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] Error subscribing to loan signature:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+     * Manually check if a loan's payload has been signed
+     * @param {string} loanId - The loan ID to check
+     * @returns {Promise<Object>} Result of verification and execution
+     */
+  async verifyLoanSignature(loanId) {
+    try {
+      // Get loan
+      const loan = await Loan.findById(loanId);
+      if (!loan) {
+        throw new Error('Loan not found');
+      }
+      
+      // Check payload status directly
+      const payload = await this.xummHandler.checkPayloadStatus(loan.escrowPayloadId);
+      
+      if (payload.meta.signed === true) {
+        // Execute the loan
+        console.log(`[${new Date().toISOString()}] Manual verification found signed payload for loan ${loanId}`);
+        return await this.executeLoan(loanId, loan.escrowPayloadId, loan.borrower);
+      } else {
+        return { 
+          success: false, 
+          message: 'Transaction not signed yet',
+          payloadStatus: payload.meta 
+        };
+      }
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] Error verifying loan signature:`, error);
+      throw error;
+    }
+  }
+
+  async executeLoan(loanId, payloadId, walletAddress) {
+    const loan = await Loan.findById(loanId);
+
+    // --- Security and State Checks ---
+    if (!loan) throw new Error("Loan not found.");
+    if (loan.borrower !== walletAddress) throw new Error("Authorization error: Wallet address does not match loan borrower.");
+    if (loan.status !== 'PENDING') throw new Error(`Loan is not pending signature. Current status: ${loan.status}`);
+    if (loan.escrowPayloadId !== payloadId) throw new Error("Payload ID mismatch.");
+
+    // 1. Securely verify the payload signature with the Xumm API on the backend
+    const verification = await xrplService.verifySignature(payloadId);
+    if (!verification.signed) {
+      throw new Error("Xumm signature verification failed.");
+    }
+    
+    console.log(`[LoanService] Signature verified for loan ${loanId}.`);
+
+    // 2. Disburse the full loan amount from the protocol to the borrower
+    const disburseResult = await xrplService.disburseLoan(loan.borrower, loan.amount);
+
+    // 3. Update the loan document to ACTIVE
+    loan.status = 'ACTIVE';
+    loan.collateralTxHash = verification.txid; // The hash of the successful EscrowCreate tx
+    loan.disbursementTxHash = disburseResult.txHash;
+    loan.activationDate = new Date();
+    // In a real system, we'd get the escrow sequence from the transaction metadata
+    loan.escrowSequence = disburseResult.sequence; 
+    
+    await loan.save();
+
+    console.log(`[LoanService] Loan ${loanId} is now ACTIVE.`);
+    return { success: true, loan };
   }
 
   /**
