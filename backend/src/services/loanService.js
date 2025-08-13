@@ -539,6 +539,9 @@ class LoanService {
         return payment.confirmed ? sum + payment.amount : sum;
       }, 0);
       
+      console.log('TOTAL_REPAID', totalRepaid);
+      console.log("TOTAL_OWED", totalOwed);
+      
       // Check if loan is fully repaid
       if (totalRepaid >= totalOwed) {
         loan.status = 'REPAID';
@@ -706,11 +709,10 @@ class LoanService {
       const remainingOwed = totalOwed - totalRepaid;
       
       // Calculate how much is covered by collateral and how much is actual loss
-      const collateralValue = loan.collateralAmount; // In a real system, this might have changed with XRP price
+      const collateralValue = loan.collateralAmount;
       const uncoveredLoss = Math.max(0, remainingOwed - collateralValue);
       
       // Claim the collateral (partial coverage of the loan)
-      // In real implementation, this would be an actual XRPL transaction
       const claimTxHash = `CLAIM_TX_${Math.random().toString(36).substring(2, 15)}`;
       
       // Update loan status

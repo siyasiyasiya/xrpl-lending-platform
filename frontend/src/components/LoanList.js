@@ -116,7 +116,7 @@ const LoanList = () => {
                       View Details
                     </Link>
                     {loan.status === 'ACTIVE' && (
-                      <Link to={`/loans/${loan._id}/repay`} className="repay-btn">
+                      <Link to={`/repay/${loan._id}`} className="repay-btn">
                         Repay Loan
                       </Link>
                     )}
