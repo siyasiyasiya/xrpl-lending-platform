@@ -10,7 +10,7 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="navbar-container">
         <Link to="/" className="navbar-logo">
-          XRPLend
+          XRPLend++
         </Link>
         
         <div className="navbar-links">
@@ -19,7 +19,7 @@ const Navbar = () => {
           {isAuthenticated ? (
             <>
               <Link to="/dashboard" className="navbar-link">Dashboard</Link>
-              <Link to="/profile" className="navbar-link">Profile</Link>
+              {/* <Link to="/profile" className="navbar-link">Profile</Link> */}
               <button onClick={logout} className="navbar-button">Disconnect</button>
               
               <div className="navbar-wallet">
