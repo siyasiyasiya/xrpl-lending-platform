@@ -127,11 +127,6 @@ const LoanList = () => {
           </table>
         </div>
       )}
-      
-      <div className="footer-info">
-        <div className="user-info">Current User's Login: siyasiyasiya</div>
-        <div className="last-updated">Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): {timestamp}</div>
-      </div>
     </div>
   );
 };

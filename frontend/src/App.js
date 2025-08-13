@@ -10,7 +10,7 @@ import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 // import UserProfilePage from './pages/UserProfilePage';
-// import LoanDetailsPage from './pages/LoanDetailsPage';
+import LoanDetails from './components/LoanDetails';
 import RepayLoanPage from './pages/RepayLoanPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 // import NotFoundPage from './pages/NotFoundPage';
@@ -59,14 +59,14 @@ function App() {
                 } 
               /> */}
               
-              {/* <Route 
+              <Route 
                 path="/loans/:id" 
                 element={
                   <ProtectedRoute>
-                    <LoanDetailsPage />
+                    <LoanDetails />
                   </ProtectedRoute>
                 } 
-              /> */}
+              />
               
               <Route 
                 path="/repay/:id" 
