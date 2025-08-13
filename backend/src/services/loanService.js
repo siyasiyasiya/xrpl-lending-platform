@@ -541,7 +541,6 @@ class LoanService {
       
       console.log('TOTAL_REPAID', totalRepaid);
       console.log("TOTAL_OWED", totalOwed);
-      
       // Check if loan is fully repaid
       if (totalRepaid >= totalOwed) {
         loan.status = 'REPAID';
@@ -688,32 +687,103 @@ class LoanService {
   /**
    * Handle defaulted undercollateralized loans
    * @param {string} loanId - ID of the defaulted loan
+   * @param {boolean} [forceDefault=false] - Force default even if not past due (admin override)
    * @returns {Promise<object>} Updated loan object
    */
-  async handleDefaultedLoan(loanId) {
+  async handleDefaultedLoan(loanId, forceDefault = false) {
     try {
+      console.log(`[DEFAULT] Beginning default process for loan ${loanId}`);
+      
       const loan = await Loan.findById(loanId);
       if (!loan) {
         throw new Error('Loan not found');
       }
 
+      // Check loan status
       if (loan.status !== 'ACTIVE') {
         throw new Error(`Cannot mark as defaulted: loan with status ${loan.status}`);
       }
-
-      // Calculate how much was actually repaid
-      const totalRepaid = loan.repaymentHistory.reduce((sum, payment) => sum + payment.amount, 0);
       
-      // Calculate remaining principal + interest
-      const totalOwed = loan.amount * (1 + loan.interestRate);
-      const remainingOwed = totalOwed - totalRepaid;
+      // Verify the loan is past due (unless force default is enabled)
+      if (!forceDefault) {
+        const now = new Date();
+        const dueDate = new Date(loan.dueDate);
+        
+        if (now < dueDate) {
+          console.log(`[DEFAULT] Loan ${loanId} is not yet past due. Due date: ${dueDate.toISOString()}`);
+          throw new Error(`Cannot mark as defaulted: loan is not yet past due. Due date: ${dueDate.toISOString()}`);
+        }
+        
+        const gracePeriod = process.env.DEFAULT_GRACE_PERIOD_DAYS || 3; // days
+        const gracePeriodEnd = new Date(dueDate);
+        gracePeriodEnd.setDate(gracePeriodEnd.getDate() + parseInt(gracePeriod));
+        
+        if (now < gracePeriodEnd) {
+          console.log(`[DEFAULT] Loan ${loanId} is within grace period of ${gracePeriod} days`);
+          throw new Error(`Cannot mark as defaulted: loan is within grace period of ${gracePeriod} days`);
+        }
+        
+        console.log(`[DEFAULT] Loan ${loanId} is past due date and grace period`);
+      } else {
+        console.log(`[DEFAULT] Force defaulting loan ${loanId} by admin override`);
+      }
+
+      const repayments = loan.repayments || [];
+      
+      // Calculate from repayments array (new structure)
+      const totalRepaid = repayments.reduce(
+        (sum, payment) => payment.confirmed ? sum + payment.amount : sum, 
+        0
+      );
+      
+      // Calculate total owed (principal + interest)
+      // Check if interest rate is stored as percentage or decimal
+      let interestRate = loan.interestRate;
+      if (interestRate > 1) {
+        // Convert from percentage to decimal if needed
+        interestRate = interestRate / 100;
+      }
+      
+      const interestAmount = loan.amount * interestRate;
+      const totalOwed = loan.amount + interestAmount;
+      const remainingOwed = Math.max(0, totalOwed - totalRepaid);
       
       // Calculate how much is covered by collateral and how much is actual loss
       const collateralValue = loan.collateralAmount;
       const uncoveredLoss = Math.max(0, remainingOwed - collateralValue);
       
-      // Claim the collateral (partial coverage of the loan)
-      const claimTxHash = `CLAIM_TX_${Math.random().toString(36).substring(2, 15)}`;
+      console.log(`[DEFAULT] Loan ${loanId} default metrics:
+        Total Owed: ${totalOwed} XRP
+        Total Repaid: ${totalRepaid} XRP
+        Remaining: ${remainingOwed} XRP
+        Collateral: ${collateralValue} XRP
+        Uncovered Loss: ${uncoveredLoss} XRP
+      `);
+      
+      let claimTxHash = null;
+      
+      // If there is an escrow sequence, claim it on the XRPL
+      if (loan.escrowSequence) {
+        try {
+          console.log(`[DEFAULT] Attempting to claim escrow for loan ${loanId} with sequence ${loan.escrowSequence}`);
+          const claimResult = await xrplService.claimCollateralEscrow(
+            loan.borrower,
+            loan.escrowSequence
+          );
+          
+          claimTxHash = claimResult.txHash;
+          console.log(`[DEFAULT] Successfully claimed collateral for loan ${loanId}, txHash: ${claimTxHash}`);
+        } catch (escrowError) {
+          console.error(`[ERROR] Failed to claim escrow for defaulted loan ${loanId}:`, escrowError);
+          
+          // Generate a placeholder hash for recording purposes
+          claimTxHash = `ERROR_CLAIM_TX_${Math.random().toString(36).substring(2, 15)}`;
+          console.log(`[DEFAULT] Using placeholder tx hash for failed claim: ${claimTxHash}`);
+        }
+      } else {
+        console.warn(`[WARNING] No escrow sequence found for loan ${loanId}`);
+        claimTxHash = `MISSING_ESCROW_TX_${Math.random().toString(36).substring(2, 15)}`;
+      }
       
       // Update loan status
       loan.status = 'DEFAULTED';
@@ -724,17 +794,16 @@ class LoanService {
         collateralClaimed: collateralValue,
         uncoveredLoss,
         claimTxHash,
-        defaultedAt: new Date()
+        defaultedAt: new Date(),
+        reason: forceDefault ? 'Administrative action' : 'Loan past due date with insufficient repayment'
       };
       
       await loan.save();
-      
-      // Update platform risk metrics (important for undercollateralized lending)
-      // In a real implementation, you'd update a separate collection for risk analytics
+      console.log(`[DEFAULT] Loan ${loanId} status updated to DEFAULTED`);
       
       return loan;
     } catch (error) {
-      console.error('Error handling defaulted loan:', error);
+      console.error(`[ERROR] Error handling defaulted loan ${loanId}:`, error);
       throw error;
     }
   }
@@ -771,63 +840,56 @@ class LoanService {
     }
   }
 
-  /**
-   * Get platform metrics specific to undercollateralized lending
-   * @returns {Promise<object>} Platform metrics
-   */
   async getPlatformMetrics() {
     try {
-      // Get all loans
+      // Get all loans - this is the ONLY database query we need now.
       const loans = await Loan.find();
       
-      // Calculate basic metrics
+      // --- All this calculation logic is good and remains the same ---
       const totalLoans = loans.length;
       const activeLoans = loans.filter(loan => loan.status === 'ACTIVE').length;
       const repaidLoans = loans.filter(loan => loan.status === 'REPAID').length;
       const defaultedLoans = loans.filter(loan => loan.status === 'DEFAULTED').length;
-      
-      // Calculate financial metrics
       const totalLoanVolume = loans.reduce((sum, loan) => sum + loan.amount, 0);
       const totalCollateralLocked = loans
         .filter(loan => loan.status === 'ACTIVE')
         .reduce((sum, loan) => sum + loan.collateralAmount, 0);
-      
-      // Calculate undercollateralized amount (the trust-based lending amount)
       const totalUndercollateralizedAmount = loans
         .filter(loan => loan.status === 'ACTIVE')
         .reduce((sum, loan) => sum + (loan.amount - loan.collateralAmount), 0);
-      
-      // Calculate default rate (critical for undercollateralized lending)
-      const defaultRate = totalLoans > 0 ? defaultedLoans / totalLoans : 0;
-      
-      // Calculate loss metrics (specific to undercollateralized lending)
+      const defaultRate = totalLoans > 0 ? (defaultedLoans / totalLoans) * 100 : 0; // As percentage
       const totalLossAmount = loans
         .filter(loan => loan.status === 'DEFAULTED' && loan.defaultDetails)
         .reduce((sum, loan) => sum + (loan.defaultDetails.uncoveredLoss || 0), 0);
-      
-      // Calculate average collateralization ratio
-      const avgCollateralRatio = loans.length > 0
-        ? loans.reduce((sum, loan) => sum + (loan.collateralAmount / loan.amount), 0) / loans.length
+      const avgCollateralRatio = totalLoans > 0
+        ? (loans.reduce((sum, loan) => sum + (loan.collateralAmount / loan.amount), 0) / totalLoans) * 100 // As percentage
         : 0;
-      
-      // Get distribution by risk category
-      const users = await User.find();
+  
+      // --- START: CORRECTED RISK DISTRIBUTION LOGIC ---
+  
+      // 1. Initialize the distribution map.
       const riskDistribution = {
         'Very Low Risk': 0,
         'Low Risk': 0,
         'Medium Risk': 0,
         'High Risk': 0,
-        'Very High Risk': 0
+        'Very High Risk': 0,
+        'Unknown': 0 // For older loans without the field
       };
       
-      users.forEach(user => {
-        if (user.creditScore) {
-          const pcaScore = this.convertCreditScoreToPCA(user.creditScore);
-          const { category } = this.calculateRiskCategory(pcaScore);
-          riskDistribution[category]++;
+      // 2. Iterate through the loans we already fetched. NO extra DB call!
+      for (const loan of loans) {
+        if (loan.riskCategory) {
+          // Increment the count for the category stored ON THE LOAN.
+          riskDistribution[loan.riskCategory]++;
+        } else {
+          // Handle old data gracefully.
+          riskDistribution['Unknown']++;
         }
-      });
-      
+      }
+  
+      // --- END: CORRECTED LOGIC ---
+  
       return {
         totalLoans,
         activeLoans,
@@ -836,9 +898,9 @@ class LoanService {
         totalLoanVolume,
         totalCollateralLocked,
         totalUndercollateralizedAmount,
-        defaultRate,
+        defaultRate: defaultRate.toFixed(2) + '%',
         totalLossAmount,
-        avgCollateralRatio,
+        avgCollateralRatio: avgCollateralRatio.toFixed(2) + '%',
         riskDistribution
       };
     } catch (error) {

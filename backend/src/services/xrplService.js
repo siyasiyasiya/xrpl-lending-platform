@@ -218,6 +218,132 @@ class XRPLService {
       await this.disconnect();
     }
   }
+
+  /**
+   * Claim collateral from escrow on loan default
+   * @param {string} borrowerAddress - Borrower's address (escrow owner)
+   * @param {number} escrowSequence - Sequence number of the escrow to claim
+   * @returns {Promise<object>} Result of claiming the escrow
+   */
+  async claimCollateralEscrow(borrowerAddress, escrowSequence) {
+    await this.connect();
+    try {
+      console.log(`[XRPL] Attempting to claim escrow from ${borrowerAddress}, sequence ${escrowSequence}`);
+      
+      // Create a wallet instance from platform secret
+      const wallet = xrpl.Wallet.fromSeed(config.platformEscrowSecret);
+
+      // First, verify the escrow exists and is claimable
+      const accountEscrows = await this.api.request({
+        command: 'account_objects',
+        account: borrowerAddress,
+        type: 'escrow'
+      });
+      
+      console.log(`[XRPL] Found ${accountEscrows.result?.account_objects?.length || 0} escrows for account`);
+      
+      // Find the specific escrow with the given sequence
+      const escrow = accountEscrows.result?.account_objects?.find(obj => 
+        obj.OwnerNode === escrowSequence.toString() || 
+        obj.PreviousTxnLgrSeq === escrowSequence
+      );
+      
+      if (!escrow) {
+        throw new Error(`Escrow with sequence ${escrowSequence} not found for borrower ${borrowerAddress}`);
+      }
+      
+      console.log(`[XRPL] Found escrow: ${JSON.stringify(escrow)}`);
+      
+      // Prepare the EscrowFinish transaction
+      const escrowFinishTx = {
+        TransactionType: 'EscrowFinish',
+        Account: wallet.address,
+        Owner: borrowerAddress,
+        OfferSequence: escrowSequence,
+        Flags: 0 // Standard flags
+      };
+
+      // Add Condition and Fulfillment if they exist in the escrow
+      if (escrow.Condition) {
+        escrowFinishTx.Condition = escrow.Condition;
+        // In a real system, you'd need to provide the Fulfillment
+        // This is just a placeholder
+        escrowFinishTx.Fulfillment = ''; 
+      }
+      
+      console.log(`[XRPL] Preparing EscrowFinish transaction`);
+      const prepared = await this.api.autofill(escrowFinishTx);
+
+      // Sign the prepared transaction
+      console.log(`[XRPL] Signing transaction with wallet`);
+      const signed = wallet.sign(prepared);
+      const txHash = signed.hash;
+
+      console.log(`[XRPL] Submitting escrow finish transaction with hash: ${txHash}`);
+
+      // Submit the signed transaction blob
+      const result = await this.api.submit(signed.tx_blob);
+      console.log(`[XRPL] Submission result: ${JSON.stringify(result.result)}`);
+
+      if (result.result.engine_result === 'tesSUCCESS') {
+        console.log('[XRPL] Escrow claim successful. Collateral claimed.');
+        return { 
+          success: true, 
+          txHash,
+          result: result.result
+        };
+      } else if (result.result.engine_result === 'terQUEUED') {
+        // Transaction is queued - this is usually fine
+        console.log('[XRPL] Escrow claim queued for processing.');
+        return { 
+          success: true, 
+          txHash,
+          status: 'queued',
+          result: result.result
+        };
+      } else {
+        throw new Error(`Escrow claim failed: ${result.result.engine_result_message}`);
+      }
+    } catch (error) {
+      console.error('Error claiming escrow collateral:', error);
+      throw error;
+    } finally {
+      await this.disconnect();
+    }
+  }
+  
+  /**
+   * Check if a borrower has any unclaimed/expired escrows
+   * @param {string} borrowerAddress - Borrower's XRP address
+   * @returns {Promise<Array>} Array of eligible escrows
+   */
+  async checkForUnclaimedEscrows(borrowerAddress) {
+    await this.connect();
+    try {
+      // Get all escrows where the borrower is the owner
+      const accountEscrows = await this.api.request({
+        command: 'account_objects',
+        account: borrowerAddress,
+        type: 'escrow'
+      });
+      
+      const now = new Date();
+      const rippleEpochOffset = 946684800;
+      const currentRippleTime = Math.floor(now.getTime() / 1000) - rippleEpochOffset;
+      
+      // Filter for escrows that are past their FinishAfter time
+      const claimableEscrows = accountEscrows.result?.account_objects?.filter(escrow => {
+        return escrow.FinishAfter && escrow.FinishAfter < currentRippleTime;
+      }) || [];
+      
+      return claimableEscrows;
+    } catch (error) {
+      console.error('Error checking for unclaimed escrows:', error);
+      throw error;
+    } finally {
+      await this.disconnect();
+    }
+  }
 }
 
 module.exports = new XRPLService();

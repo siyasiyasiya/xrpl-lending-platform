@@ -17,6 +17,7 @@
     "express-validator": "^7.2.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.17.1",
+    "node-cron": "^4.2.1",
     "react-qr-code": "^2.0.18",
     "ripple-lib": "^1.10.1",
     "xrpl": "^4.4.0",
