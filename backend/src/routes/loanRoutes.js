@@ -152,29 +152,94 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// Make a repayment
-router.post('/:id/repay', auth, async (req, res) => {
+// Create a repayment request (generates XUMM payload)
+router.post('/:id/repay', [
+  auth,
+  check('amount', 'Amount is required').isNumeric(),
+  validate
+], async (req, res) => {
   try {
     const { amount } = req.body;
     const loanId = req.params.id;
+    const walletAddress = req.user.walletAddress;
     
-    const loan = await loanService.getLoanById(loanId);
+    // Create repayment request and get XUMM payload
+    const result = await loanService.createRepaymentRequest(
+      loanId, 
+      parseFloat(amount),
+      walletAddress
+    );
     
-    if (!loan) {
-      return res.status(404).json({ error: 'Loan not found' });
-    }
-    
-    // Check if user is authorized
-    if (loan.borrower !== req.user.walletAddress) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
-    
-    const updatedLoan = await loanService.processRepayment(loanId, amount);
-    res.status(200).json(updatedLoan);
+    res.status(200).json({
+      success: true,
+      repayment: result.repayment,
+      payload: result.payload
+    });
   } catch (error) {
-    console.error('Error processing repayment:', error);
-    res.status(500).json({ error: 'Failed to process repayment' });
+    console.error('Error creating repayment request:', error);
+    res.status(400).json({ success: false, message: error.message });
   }
 });
+
+// Subscribe to repayment signature events
+router.post('/:id/repayments/:repaymentId/subscribe', auth, async (req, res) => {
+  try {
+    const loanId = req.params.id;
+    const repaymentId = req.params.repaymentId;
+    
+    // Optional authorization check
+    const loan = await loanService.getLoanById(loanId);
+    if (loan.borrower !== req.user.walletAddress) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Not authorized to subscribe to this repayment' 
+      });
+    }
+    
+    const result = await loanService.subscribeToRepaymentSignature(loanId, repaymentId);
+    
+    res.json({
+      success: true,
+      message: 'Subscription created successfully'
+    });
+  } catch (error) {
+    console.error('Error subscribing to repayment:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Manual verification of repayment (for hackathon/testing)
+router.post('/:id/repayments/:repaymentId/verify', auth, async (req, res) => {
+  try {
+    const loanId = req.params.id;
+    const repaymentId = req.params.repaymentId;
+    
+    const result = await loanService.verifyRepaymentSignature(loanId, repaymentId);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        loan: result.loan,
+        txHash: result.txHash,
+        isFullyRepaid: result.isFullyRepaid
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.message
+      });
+    }
+  } catch (error) {
+    console.error('Error verifying repayment:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 
 module.exports = router;

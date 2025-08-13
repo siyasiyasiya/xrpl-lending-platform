@@ -196,7 +196,7 @@ class LoanService {
       throw error;
     }
   }
-  
+
   /**
      * Manually check if a loan's payload has been signed
      * @param {string} loanId - The loan ID to check
@@ -315,6 +315,297 @@ class LoanService {
       return loan;
     } catch (error) {
       console.error('Error approving undercollateralized loan:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a repayment request for a loan
+   * @param {string} loanId - ID of the loan being repaid
+   * @param {number} amount - Repayment amount
+   * @param {string} borrowerAddress - Address of the borrower making payment
+   * @returns {Promise<object>} Repayment data and XUMM payload
+   */
+  async createRepaymentRequest(loanId, amount, borrowerAddress) {
+    try {
+      const loan = await Loan.findById(loanId);
+      if (!loan) {
+        throw new Error('Loan not found');
+      }
+
+      if (loan.status !== 'ACTIVE') {
+        throw new Error(`Cannot process repayment for loan with status: ${loan.status}`);
+      }
+      
+      // Verify borrower is the actual loan borrower
+      if (loan.borrower !== borrowerAddress) {
+        throw new Error('Unauthorized: Only the borrower can repay this loan');
+      }
+      
+      // Calculate total owed (principal + interest)
+      const interestAmount = loan.amount * (loan.interestRate / 100);
+      const totalOwed = loan.amount + interestAmount;
+      
+      // Calculate total repaid so far
+      const totalRepaid = loan.repayments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+      
+      // Calculate remaining balance
+      const remainingBalance = Math.max(0, totalOwed - totalRepaid);
+      
+      // Validate repayment amount
+      if (amount <= 0) {
+        throw new Error('Repayment amount must be greater than zero');
+      }
+      
+      if (amount > remainingBalance) {
+        throw new Error(`Repayment amount (${amount} XRP) exceeds remaining balance (${remainingBalance} XRP)`);
+      }
+      
+      // Create a new repayment record
+      const repayment = {
+        amount,
+        timestamp: new Date(),
+        confirmed: false
+      };
+      
+      // If we don't have a repayments array yet, create it
+      if (!loan.repayments) {
+        loan.repayments = [];
+      }
+      
+      // Add the repayment to the loan's repayments array
+      loan.repayments.push(repayment);
+      await loan.save();
+      
+      // Get the ID of the newly added repayment (last element in the array)
+      const repaymentId = loan.repayments[loan.repayments.length - 1]._id;
+      
+      // Create XUMM payload for the repayment transaction
+      const payload = await xrplService.createRepaymentPayload(
+        borrowerAddress, 
+        amount,
+        loanId
+      );
+      
+      // Update the repayment with the payload ID
+      const repaymentIndex = loan.repayments.findIndex(r => r._id.toString() === repaymentId.toString());
+      if (repaymentIndex !== -1) {
+        loan.repayments[repaymentIndex].payloadId = payload.uuid;
+        await loan.save();
+      }
+      
+      // Return repayment data and payload
+      return { 
+        repayment: loan.repayments[repaymentIndex], 
+        payload 
+      };
+    } catch (error) {
+      console.error('Error creating repayment request:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Subscribe to repayment payload signature events
+   * @param {string} loanId - The loan ID 
+   * @param {string} repaymentId - The repayment ID
+   * @returns {Promise<Object>} Subscription result
+   */
+  async subscribeToRepaymentSignature(loanId, repaymentId) {
+    try {
+      // Get loan from database
+      const loan = await Loan.findById(loanId);
+      if (!loan) {
+        throw new Error('Loan not found');
+      }
+      
+      // Find the specific repayment
+      const repayment = loan.repayments.find(r => r._id.toString() === repaymentId);
+      if (!repayment) {
+        throw new Error('Repayment not found');
+      }
+      
+      if (!repayment.payloadId) {
+        throw new Error('No payload ID found for repayment');
+      }
+      
+      // Create subscription with callbacks
+      const result = await this.xummHandler.subscribeToPayload(
+        repayment.payloadId,
+        `${loanId}:${repaymentId}`, // Use combined ID for context
+        // onSigned callback
+        async (context, payload) => {
+          const [loanId, repaymentId] = context.split(':');
+          console.log(`[${new Date().toISOString()}] Processing signed repayment for loan ${loanId}, repayment ${repaymentId}`);
+          await this.processRepaymentSignature(loanId, repaymentId, payload.uuid);
+        },
+        // onRejected callback
+        async (context) => {
+          const [loanId, repaymentId] = context.split(':');
+          console.log(`[${new Date().toISOString()}] Processing rejected repayment for loan ${loanId}, repayment ${repaymentId}`);
+          await this.rejectRepayment(loanId, repaymentId);
+        }
+      );
+      
+      return result;
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] Error subscribing to repayment signature:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Manually verify a repayment signature
+   * @param {string} loanId - The loan ID
+   * @param {string} repaymentId - The repayment ID
+   * @returns {Promise<Object>} Result of verification
+   */
+  async verifyRepaymentSignature(loanId, repaymentId) {
+    try {
+      // Get loan
+      const loan = await Loan.findById(loanId);
+      if (!loan) {
+        throw new Error('Loan not found');
+      }
+      
+      // Find the repayment
+      const repaymentIndex = loan.repayments.findIndex(r => r._id.toString() === repaymentId);
+      if (repaymentIndex === -1) {
+        throw new Error('Repayment not found');
+      }
+      
+      const repayment = loan.repayments[repaymentIndex];
+      if (!repayment.payloadId) {
+        throw new Error('No payload ID found for repayment');
+      }
+      
+      // Check payload status directly
+      const payload = await this.xummHandler.checkPayloadStatus(repayment.payloadId);
+      
+      if (payload.meta.signed === true) {
+        // Process the repayment
+        console.log(`[${new Date().toISOString()}] Manual verification found signed payload for repayment`);
+        return await this.processRepaymentSignature(loanId, repaymentId, repayment.payloadId);
+      } else {
+        return { 
+          success: false, 
+          message: 'Transaction not signed yet',
+          payloadStatus: payload.meta 
+        };
+      }
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] Error verifying repayment signature:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process a signed repayment
+   * @param {string} loanId - The loan ID
+   * @param {string} repaymentId - The repayment ID
+   * @param {string} payloadId - The XUMM payload ID
+   * @returns {Promise<Object>} Processing result
+   */
+  async processRepaymentSignature(loanId, repaymentId, payloadId) {
+    try {
+      // Get loan
+      const loan = await Loan.findById(loanId);
+      if (!loan) {
+        throw new Error('Loan not found');
+      }
+      
+      // Find the repayment
+      const repaymentIndex = loan.repayments.findIndex(r => r._id.toString() === repaymentId);
+      if (repaymentIndex === -1) {
+        throw new Error('Repayment not found');
+      }
+      
+      // Verify the signature
+      const verification = await xrplService.verifySignature(payloadId);
+      if (!verification.signed) {
+        throw new Error('Signature verification failed');
+      }
+      
+      // Update repayment with transaction details
+      loan.repayments[repaymentIndex].txHash = verification.txid;
+      loan.repayments[repaymentIndex].confirmed = true;
+      
+      // Calculate total owed (principal + interest)
+      const interestAmount = loan.amount * (loan.interestRate / 100);
+      const totalOwed = loan.amount + interestAmount;
+      
+      // Calculate total repaid including this repayment
+      const totalRepaid = loan.repayments.reduce((sum, payment) => {
+        return payment.confirmed ? sum + payment.amount : sum;
+      }, 0);
+      
+      // Check if loan is fully repaid
+      if (totalRepaid >= totalOwed) {
+        loan.status = 'REPAID';
+        loan.repaidAt = new Date();
+        
+        // If collateral is in escrow, release it
+        if (loan.escrowSequence) {
+          try {
+            // This would be handled async in a real system to prevent blocking
+            await xrplService.releaseCollateral(loan.escrowSequence, loan.borrower);
+            loan.collateralReleased = true;
+            loan.collateralReleasedAt = new Date();
+          } catch (escrowError) {
+            console.error('Error releasing collateral:', escrowError);
+            // Don't fail the whole process if escrow release fails
+            // A separate process should retry failed escrow releases
+          }
+        }
+      }
+      
+      await loan.save();
+      
+      return {
+        success: true,
+        loan,
+        repaymentId,
+        txHash: verification.txid,
+        isFullyRepaid: loan.status === 'REPAID'
+      };
+    } catch (error) {
+      console.error('Error processing repayment signature:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Reject a repayment request
+   * @param {string} loanId - The loan ID
+   * @param {string} repaymentId - The repayment ID
+   * @returns {Promise<Object>} Rejection result
+   */
+  async rejectRepayment(loanId, repaymentId) {
+    try {
+      // Get loan
+      const loan = await Loan.findById(loanId);
+      if (!loan) {
+        throw new Error('Loan not found');
+      }
+      
+      // Find and remove the repayment
+      const repaymentIndex = loan.repayments.findIndex(r => r._id.toString() === repaymentId);
+      if (repaymentIndex === -1) {
+        throw new Error('Repayment not found');
+      }
+      
+      // Mark as rejected instead of removing
+      loan.repayments[repaymentIndex].rejected = true;
+      loan.repayments[repaymentIndex].rejectedAt = new Date();
+      
+      await loan.save();
+      
+      return {
+        success: true,
+        message: 'Repayment request rejected'
+      };
+    } catch (error) {
+      console.error('Error rejecting repayment:', error);
       throw error;
     }
   }

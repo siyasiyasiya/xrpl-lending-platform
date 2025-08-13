@@ -44,11 +44,17 @@ const loanSchema = new mongoose.Schema({
   repayments: [{
     amount: Number,
     txHash: String,
+    payloadId: {
+      type: String,
+    },
     timestamp: {
       type: Date,
       default: Date.now
+    },
+    confirmed: {
+      type: Boolean,
+      default: false
     }
   }]
 });
-
 module.exports = mongoose.model('Loan', loanSchema);
