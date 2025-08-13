@@ -16,9 +16,9 @@ Standard DeFi lending is capital-inefficient. It requires users to lock up more 
 
 ### Our Solution: The Intelligent Lending Protocol
 
-Our project solves this problem by introducing a novel, off-chain **Machine Learning Risk Engine** that works in perfect synergy with the XRPL.
+This project solves this problem by introducing a novel, off-chain **Machine Learning Risk Engine** that works in perfect synergy with the XRPL.
 
-Our ML model analyzes a user's on-chain history to generate a dynamic credit score. This score then informs the terms of the loan, allowing our protocol to offer more favorable rates—and for the first time, **undercollateralized loans**—to trustworthy participants. We use the XRPL as the **source of truth for our data** and the **secure settlement layer for our contracts**, creating a hybrid system that is more intelligent, inclusive, and capital-efficient than anything on the market today.
+The ML model analyzes a user's on-chain history to generate a dynamic credit score. This score then informs the terms of the loan, allowing our protocol to offer more favorable rates—and for the first time, **undercollateralized loans**—to trustworthy participants. I use the XRPL as the **source of truth for our data** and the **secure settlement layer for our contracts**, creating a hybrid system that is more intelligent, inclusive, and capital-efficient than anything on the market today.
 
 ## Key Features
 
@@ -42,7 +42,7 @@ Our ML model analyzes a user's on-chain history to generate a dynamic credit sco
 
 ## Architecture: A Hybrid On-Chain & Off-Chain System
 
-Our protocol is designed to leverage the best of both worlds: the immutable truth of the blockchain and the computational power of off-chain services.
+This protocol is designed to leverage the best of both worlds: the immutable truth of the blockchain and the computational power of off-chain services.
 
 ```mermaid
 graph TD;
@@ -73,13 +73,13 @@ graph TD;
 
 ## Core XRPL Features Utilized
 
-Our protocol doesn't just use the XRPL as a simple database; the ledger's unique, native features are the foundation of our security and trust model.
+This protocol doesn't just use the XRPL as a simple database; the ledger's unique, native features are the foundation of the security and trust model.
 
-*   **Native On-Chain Escrows:** We use `EscrowCreate` to lock user collateral directly on the ledger. This is a native smart contract that programmatically enforces the terms of the loan without the need for complex, custom-deployed contracts, making our protocol highly secure and efficient.
+*   **Native On-Chain Escrows:** I used `EscrowCreate` to lock user collateral directly on the ledger. This is a native smart contract that programmatically enforces the terms of the loan without the need for complex, custom-deployed contracts, making our protocol highly secure and efficient.
 
-*   **Atomic L1 Payments:** The core functions of our protocol—disbursing loans and processing repayments—are executed as `Payment` transactions. We use the ledger as the ultimate source of truth by verifying transaction hashes to confirm that value has been transferred before updating our internal state.
+*   **Atomic On-Ledge Payments:** The core functions of the protocol, disbursing loans and processing repayments, are executed as `Payment` transactions. I use the ledger as the ultimate source of truth by verifying transaction hashes to confirm that value has been transferred before updating our internal state.
 
-*   **On-Chain Data Anchoring (Memos):** Every significant transaction is tagged with on-chain metadata using the `Memos` field. This allows us to link on-chain activity (like a repayment) directly to off-chain records (like a specific `loanId`), making our protocol transparent and auditable.
+*   **On-Chain Data Anchoring (Memos):** Every significant transaction is tagged with on-chain metadata using the `Memos` field. This allows the protocol to link on-chain activity (like a repayment) directly to off-chain records (like a specific `loanId`), making the protocol transparent and auditable.
 
 *   **Fast Transaction Finality (3-5 seconds):** The near-instant finality of the XRPL allows for a superior user experience. Loan disbursements and collateral releases are confirmed almost instantly, removing the uncertainty and long waiting periods common on other platforms.
 
